@@ -2,16 +2,16 @@ use crate::vm;
 use std::sync::mpsc;
 
 #[aoc(day7, part1)]
-fn day7_part1(input: &str) -> i32 {
+fn day7_part1(input: &str) -> i64 {
 	day7(input, false)
 }
 
 #[aoc(day7, part2)]
-fn day7_part2(input: &str) -> i32 {
+fn day7_part2(input: &str) -> i64 {
 	day7(input, true)
 }
 
-fn day7(input: &str, part2: bool) -> i32 {
+fn day7(input: &str, part2: bool) -> i64 {
 	let template = vm::new_from_str(input).unwrap();
 
 	let stage_templates: Vec<_> = if !part2 { (0..5) } else { (5..10) }
@@ -52,7 +52,7 @@ fn day7(input: &str, part2: bool) -> i32 {
 		})
 		.map(|phases| {
 			let (send, recv) = mpsc::channel();
-			let root: Box<dyn Iterator<Item = i32>> = Box::new(recv.iter());
+			let root: Box<dyn Iterator<Item = i64>> = Box::new(recv.iter());
 			let mut chain = root;
 			for phase in phases {
 				chain = Box::new(

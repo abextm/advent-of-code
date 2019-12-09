@@ -6,13 +6,10 @@ use strum_macros::Display;
 
 #[derive(Debug, Display, Clone)]
 pub enum EvalError {
-	UnknownOpcode(i32),
-	IllegalArgument(i32),
-	IllegalDereference(i32),
-	InvalidAddressingMode(i32),
-	IllegalAddressingMode(i32),
+	UnknownOpcode(i64),
+	InvalidAddressingMode(i64),
+	IllegalAddressingMode(i64),
 	EndOfInput,
-	EOF,
 }
 
 impl error::Error for EvalError {
@@ -24,47 +21,51 @@ impl error::Error for EvalError {
 #[derive(Debug, Display, PartialEq)]
 pub enum EvalResult {
 	Ok,
-	Output(i32),
+	Output(i64),
 	Return,
 }
 
 lazy_static! {
-	static ref PARAMETER_DIVS: [i32; 4] = crate::util::generate(1, |x, _i| x * 10);
+	static ref PARAMETER_DIVS: [i64; 4] = crate::util::generate(1, |x, _i| x * 10);
 }
 
-pub struct State<I: Iterator<Item = i32>> {
-	pub memory: Vec<i32>,
+pub struct State<I: Iterator<Item = i64>> {
+	pub memory: Vec<i64>,
 	pub pc: usize,
+	pub base: isize,
 	pub input: I,
 }
 
 mod op {
-	pub const ADD: i32 = 1;
-	pub const MUL: i32 = 2;
-	pub const IN: i32 = 3;
-	pub const OUT: i32 = 4;
-	pub const JNZ: i32 = 5;
-	pub const JEZ: i32 = 6;
-	pub const LT: i32 = 7;
-	pub const EQ: i32 = 8;
-	pub const RET: i32 = 99;
+	pub const ADD: i64 = 1;
+	pub const MUL: i64 = 2;
+	pub const IN: i64 = 3;
+	pub const OUT: i64 = 4;
+	pub const JNZ: i64 = 5;
+	pub const JEZ: i64 = 6;
+	pub const LT: i64 = 7;
+	pub const EQ: i64 = 8;
+	pub const BASE: i64 = 9;
+	pub const RET: i64 = 99;
 }
 
 mod amode {
-	pub const ABSOLUTE_PTR: i32 = 0;
-	pub const IMMEDIATE: i32 = 1;
+	pub const ABSOLUTE_PTR: i64 = 0;
+	pub const IMMEDIATE: i64 = 1;
+	pub const RELATIVE_PTR: i64 = 2;
 }
 
-pub fn new(memory: Vec<i32>) -> State<iter::Empty<i32>> {
+pub fn new(memory: Vec<i64>) -> State<iter::Empty<i64>> {
 	State {
 		memory: memory,
 		pc: 0,
+		base: 0,
 		input: iter::empty(),
 	}
 }
 
-pub fn new_from_str(s: &str) -> Result<State<iter::Empty<i32>>, <i32 as std::str::FromStr>::Err> {
-	let mut vec: Vec<i32> = Vec::new();
+pub fn new_from_str(s: &str) -> Result<State<iter::Empty<i64>>, <i64 as std::str::FromStr>::Err> {
+	let mut vec: Vec<i64> = Vec::new();
 	for seg_ws in s.split(',') {
 		let seg = seg_ws.trim();
 		if seg.len() > 0 {
@@ -76,8 +77,8 @@ pub fn new_from_str(s: &str) -> Result<State<iter::Empty<i32>>, <i32 as std::str
 
 pub fn new_from_stream(
 	stream: impl io::BufRead,
-) -> Result<State<iter::Empty<i32>>, Box<dyn error::Error>> {
-	let mut vec: Vec<i32> = Vec::new();
+) -> Result<State<iter::Empty<i64>>, Box<dyn error::Error>> {
+	let mut vec: Vec<i64> = Vec::new();
 	for seg_br in stream.split(b',') {
 		let seg_b = seg_br?;
 		let seg = str::from_utf8(&seg_b)?.trim();
@@ -88,38 +89,41 @@ pub fn new_from_stream(
 	Ok(new(vec))
 }
 
-impl<I: Iterator<Item = i32> + Clone> Clone for State<I> {
+impl<I: Iterator<Item = i64> + Clone> Clone for State<I> {
 	fn clone(&self) -> Self {
 		State {
 			memory: self.memory.clone(),
 			pc: self.pc,
+			base: self.base,
 			input: self.input.clone(),
 		}
 	}
 }
 
-impl<I: Iterator<Item = i32>> State<I> {
-	pub fn with_input<J: Iterator<Item = i32>>(self, input: J) -> State<J> {
+impl<I: Iterator<Item = i64>> State<I> {
+	pub fn with_input<J: Iterator<Item = i64>>(self, input: J) -> State<J> {
 		State {
 			memory: self.memory,
 			pc: self.pc,
+			base: self.base,
 			input: input,
 		}
 	}
 
-	pub fn with_input_vec<'a>(self, input: &'static [i32]) -> State<impl Iterator<Item = i32>> {
+	pub fn with_input_vec<'a>(self, input: &'static [i64]) -> State<impl Iterator<Item = i64>> {
 		self.with_input(input.clone().iter().map(|x| *x))
 	}
 
-	pub fn without_input(self) -> State<iter::Empty<i32>> {
+	pub fn without_input(self) -> State<iter::Empty<i64>> {
 		State {
 			memory: self.memory,
 			pc: self.pc,
+			base: self.base,
 			input: iter::empty(),
 		}
 	}
 
-	pub fn eval_0(&mut self, args: &[i32]) -> Result<i32, EvalError> {
+	pub fn eval_0(&mut self, args: &[i64]) -> Result<i64, EvalError> {
 		self.memory[1..1 + args.len()].clone_from_slice(args);
 		self.run()?;
 		Ok(self.memory[0])
@@ -132,7 +136,7 @@ impl<I: Iterator<Item = i32>> State<I> {
 
 	pub fn single_step(&mut self) -> Result<EvalResult, EvalError> {
 		if self.memory.len() < self.pc {
-			return Err(EvalError::EOF);
+			return Err(EvalError::UnknownOpcode(0));
 		}
 		let opcode_packed = self.memory[self.pc];
 		let opcode = opcode_packed % 100;
@@ -169,12 +173,16 @@ impl<I: Iterator<Item = i32>> State<I> {
 				}
 			}
 			op::LT => {
-				*self.deref_mut(3)? = (self.deref(1)? < self.deref(2)?) as i32;
+				*self.deref_mut(3)? = (self.deref(1)? < self.deref(2)?) as i64;
 				self.pc += 4;
 			}
 			op::EQ => {
-				*self.deref_mut(3)? = (self.deref(1)? == self.deref(2)?) as i32;
+				*self.deref_mut(3)? = (self.deref(1)? == self.deref(2)?) as i64;
 				self.pc += 4;
+			}
+			op::BASE => {
+				self.base +=  self.deref(1)? as isize;
+				self.pc += 2;
 			}
 			op::RET => return Ok(EvalResult::Return),
 			_ => return Err(EvalError::UnknownOpcode(opcode)),
@@ -183,60 +191,49 @@ impl<I: Iterator<Item = i32>> State<I> {
 		Ok(EvalResult::Ok)
 	}
 
-	fn deref(&self, parameter: i32) -> Result<i32, EvalError> {
+	fn param_value(&self, parameter: i64) -> Result<(i64, i64), EvalError> {
 		let opcode_packed = self.memory[self.pc];
 		let addr_mode = (opcode_packed / PARAMETER_DIVS[parameter as usize]) % 10;
-		match addr_mode {
-			amode::ABSOLUTE_PTR => {
-				let index = self.pc + parameter as usize;
-				if index >= self.memory.len() {
-					Err(EvalError::IllegalArgument(parameter))
-				} else {
-					let ptr = self.memory[index];
-					if ptr as usize >= self.memory.len() {
-						Err(EvalError::IllegalDereference(ptr))
-					} else {
-						Ok(self.memory[ptr as usize])
-					}
-				}
-			}
-			amode::IMMEDIATE => {
-				let index = self.pc + parameter as usize;
-				if index >= self.memory.len() {
-					Err(EvalError::IllegalArgument(parameter))
-				} else {
-					Ok(self.memory[index])
-				}
-			}
-			_ => Err(EvalError::InvalidAddressingMode(addr_mode)),
+		let index = self.pc + parameter as usize;
+		if index >= self.memory.len() {
+			Ok((addr_mode, 0))
+		} else {
+			Ok((addr_mode, self.memory[index]))
 		}
 	}
 
-	fn deref_mut<'memory>(&'memory mut self, parameter: i32) -> Result<&'memory mut i32, EvalError> {
-		let opcode_packed = self.memory[self.pc];
-		let addr_mode = (opcode_packed / PARAMETER_DIVS[parameter as usize]) % 10;
-		match addr_mode {
-			amode::ABSOLUTE_PTR => {
-				let index = self.pc + parameter as usize;
-				if index >= self.memory.len() {
-					Err(EvalError::IllegalArgument(parameter))
-				} else {
-					let ptr = self.memory[index];
-					if ptr as usize >= self.memory.len() {
-						Err(EvalError::IllegalDereference(ptr))
-					} else {
-						Ok(&mut self.memory[ptr as usize])
-					}
-				}
-			}
-			amode::IMMEDIATE => Err(EvalError::IllegalAddressingMode(addr_mode)),
-			_ => Err(EvalError::InvalidAddressingMode(addr_mode)),
+	fn deref(&self, parameter: i64) -> Result<i64, EvalError> {
+		let (addr_mode, val) = self.param_value(parameter)?;
+		let ptr = match addr_mode {
+			amode::ABSOLUTE_PTR => val as usize,
+			amode::RELATIVE_PTR => (val as isize + self.base) as usize,
+			amode::IMMEDIATE => return Ok(val),
+			_ => return Err(EvalError::InvalidAddressingMode(addr_mode)),
+		};
+		if ptr >= self.memory.len() {
+			Ok(0)
+		} else {
+			Ok(self.memory[ptr])
 		}
+	}
+
+	fn deref_mut<'memory>(&'memory mut self, parameter: i64) -> Result<&'memory mut i64, EvalError> {
+		let (addr_mode, val) = self.param_value(parameter)?;
+		let ptr = match addr_mode {
+			amode::ABSOLUTE_PTR => val as usize,
+			amode::RELATIVE_PTR => (val as isize + self.base) as usize,
+			amode::IMMEDIATE => return Err(EvalError::IllegalAddressingMode(addr_mode)),
+			_ => return Err(EvalError::InvalidAddressingMode(addr_mode)),
+		};
+		if ptr >= self.memory.len() {
+			self.memory.extend((self.memory.len()..=ptr).map(|_x| 0));
+		}
+		Ok(&mut self.memory[ptr])
 	}
 }
 
-impl<I: Iterator<Item = i32>> Iterator for State<I> {
-	type Item = Result<i32, EvalError>;
+impl<I: Iterator<Item = i64>> Iterator for State<I> {
+	type Item = Result<i64, EvalError>;
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
 			match self.single_step() {
@@ -267,7 +264,7 @@ fn example_d5_1() {
 }
 
 #[cfg(test)]
-fn test_inout(mem: &[i32], inp: &'static [i32], outp: &[i32]) {
+fn test_inout(mem: &[i64], inp: &'static [i64], outp: &[i64]) {
 	assert_eq!(
 		new(mem.to_vec())
 			.with_input_vec(inp)
@@ -320,4 +317,15 @@ fn example_d5_p2_big() {
 	test_inout(&prog, &[7], &[999]);
 	test_inout(&prog, &[8], &[1000]);
 	test_inout(&prog, &[9], &[1001]);
+}
+
+#[test]
+fn example_d9_quine() {
+	let prog = [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99];
+	test_inout(&prog, &[], &prog);
+}
+
+#[test]
+fn example_d9_bignum() {
+	test_inout(&[104,1125899906842624,99], &[], &[1125899906842624])
 }
