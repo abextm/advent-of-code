@@ -1,4 +1,4 @@
-use crate::util::{self, TakeN};
+use crate::util::TakeN;
 
 #[aoc(day4, part1)]
 fn day4_part1(input: &str) -> usize {
