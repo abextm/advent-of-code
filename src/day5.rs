@@ -13,7 +13,7 @@ fn day5_part2(input: &str) -> i64 {
 fn day5(input: &str, mod_id: i64) -> i64 {
 	let mut vals = vm::new_from_str(input)
 		.unwrap()
-		.with_input([mod_id].iter().map(|x| *x))
+		.with_input([mod_id].iter().cloned())
 		.collect::<Vec<_>>();
 
 	let retval = vals.pop().unwrap();

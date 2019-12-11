@@ -26,7 +26,7 @@ pub enum EvalResult {
 }
 
 lazy_static! {
-	static ref PARAMETER_DIVS: [i64; 4] = crate::util::generate(1, |x, _i| x * 10);
+	static ref PARAMETER_DIVS: [i64; 4] = crate::taken::generate(1, |x, _i| x * 10);
 }
 
 pub struct State<I: Iterator<Item = i64>> {
@@ -111,7 +111,7 @@ impl<I: Iterator<Item = i64>> State<I> {
 	}
 
 	pub fn with_input_vec<'a>(self, input: &'static [i64]) -> State<impl Iterator<Item = i64>> {
-		self.with_input(input.clone().iter().map(|x| *x))
+		self.with_input(input.clone().iter().cloned())
 	}
 
 	pub fn without_input(self) -> State<iter::Empty<i64>> {

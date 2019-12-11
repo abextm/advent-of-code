@@ -4,8 +4,14 @@ fn day8_part1(input: &str) -> usize {
 }
 
 fn checksum(mut layers: Vec<Vec<u8>>) -> usize {
-	layers.sort_by_key(|x| x.iter().filter(|x| **x == 0).count());
-	layers[0].iter().filter(|x| **x == 1).count() * layers[0].iter().filter(|x| **x == 2).count()
+	layers
+		.iter()
+		.min_by_key(|x| x.iter().filter(|x| **x == 0).count())
+		.unwrap()
+		.iter()
+		.filter(|x| **x == 1)
+		.count()
+		* layers[0].iter().filter(|x| **x == 2).count()
 }
 
 fn decode(input: &str, dims: (usize, usize)) -> Vec<Vec<u8>> {
@@ -21,7 +27,6 @@ fn decode(input: &str, dims: (usize, usize)) -> Vec<Vec<u8>> {
 fn checksum_example() {
 	assert_eq!(checksum(decode("123456789012", (3, 2))), 1);
 }
-
 
 #[aoc(day8, part2)]
 fn day8_part2(input: &str) -> String {
