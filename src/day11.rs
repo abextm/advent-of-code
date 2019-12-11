@@ -13,14 +13,14 @@ fn day11_part2(input: &str) -> String {
 	let panel = day11(input, true);
 
 	let lx = panel.keys().map(|x| x.0).min().unwrap();
-	let dx = panel.keys().map(|x| x.0).max().unwrap() + 1- lx;
+	let ux = panel.keys().map(|x| x.0).max().unwrap() + 1;
 	let ly = panel.keys().map(|x| x.1).min().unwrap();
-	let dy = panel.keys().map(|x| x.1).max().unwrap() + 1- ly;
+	let uy = panel.keys().map(|x| x.1).max().unwrap() + 1;
 
-	let mut s = String::with_capacity((dx + 1) * dy + 1);
+	let mut s = String::with_capacity(((ux - lx) + 1) * (uy - ly) + 1);
 	s.push('\n');
-	for y in 0..dy {
-		for x in 0..dx {
+	for y in ly..uy {
+		for x in lx..ux {
 			s.push(match panel.get(&(x, y)) {
 				Some(0) => '█',
 				Some(1) =>  '░',
