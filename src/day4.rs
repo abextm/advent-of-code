@@ -11,7 +11,7 @@ fn day4_part2(input: &str) -> usize {
 }
 
 fn day4(input: &str, part2: bool) -> usize {
-	let [lower_bound, upper_bound]: [u32; 2] = input.split('-').map(|s| s.parse().unwrap()).take_n();
+	let [lower_bound, upper_bound]: [u32; 2] = input.split('-').map(|s| s.parse().unwrap()).take_n().unwrap();
 	(lower_bound..upper_bound)
 		.filter(|n| test(*n, part2))
 		.count()
