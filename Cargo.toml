@@ -12,3 +12,7 @@ strum = "0.16.0"
 strum_macros = "0.16.0"
 
 lazy_static = "1.4.0"
+
+regex = "1"
+
+num = "0.2"
