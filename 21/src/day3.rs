@@ -1,62 +1,42 @@
-
 #[aoc(day3, part1)]
-fn day3_part1(input: &str) -> i32 {
-	let input = input.trim();
-	let n = input.find('\n').expect("nn");
-	let mut v0 = vec![0; n];
-	let mut v1 = vec![0; n];
-	for str in input.split("\n") {
-		for i in 0..str.len() {
-			if str.as_bytes()[i] == '0' as u8 {
-				v0[i]+=1;
-			} else {
-				v1[i]+=1;
-			}
-		}
-	}
+fn day3_part1(input: &str) -> u32 {
+	let num_bits = input.find("\n").unwrap();
+	let input = parse_input(input);
 
 	let mut o = 0;
-	for i in 0..n {
-		o <<= 1;
-		o |= if v1[i] > v0[i] { 1 } else {0};
+	for bit in 0..num_bits {
+		o |= (max_bit(&input, bit) as u32) << bit;
 	}
-	o * (o ^ ((1<<n) - 1))
+	o * (o ^ ((1<<num_bits) - 1))
 }
 
+fn parse_input(input: &str) -> Vec<u32> {
+	input.trim().split("\n")
+		.map(|x| u32::from_str_radix(x, 2).unwrap())
+		.collect()
+}
+
+fn max_bit(input: &[u32], bit: usize) -> bool {
+	let ones: usize = input.iter()
+		.map(|&x| (x as usize >> bit) & 1)
+		.sum();
+	ones >= (input.len() - ones)
+}
 
 #[aoc(day3, part2)]
-fn day3_part2(input: &str) -> i32 {
-	let input = input.trim();
-	let rating: Vec<_> = input.split("\n").collect();
-	filt(rating.clone(), false) * filt(rating, true)
+fn day3_part2(input: &str) -> u32 {
+	let num_bits = input.find("\n").unwrap();
+	let input = parse_input(input);
+	filter(input.clone(), num_bits, false) * filter(input, num_bits, true)
 }
 
-fn filt(mut rating: Vec<&str>, inv: bool) -> i32 {
-	for bit in 0.. {
-		let mut vs = (0, 0);
-		for line in rating.iter() {
-			if line.as_bytes()[bit] == '0' as u8 {
-				vs.0+=1;
-			} else {
-				vs.1+=1;
-			}
-		}
-		let t = if (vs.0 > vs.1) ^ inv {'0'} else {'1'} as u8;
-		rating = rating.into_iter()
-			.filter(|line| line.as_bytes()[bit] == t)
-			.collect();
-		
-		if rating.len() <= 1 {
-			break;
+fn filter(mut report: Vec<u32>, num_bits: usize, invert: bool) -> u32 {
+	for bit in (0..num_bits).rev() {
+		let target = (max_bit(&report, bit) ^ invert) as u32;
+		report.retain(|&x| (x >> bit) & 1 == target);
+		if report.len() == 1 {
+			return report[0];
 		}
 	}
-
-	let mut o = 0;
-	for c in rating[0].as_bytes() {
-		o <<= 1;
-		if *c == '1' as u8 {
-			o |= 1;
-		}
-	}
-	o
+	panic!();
 }
