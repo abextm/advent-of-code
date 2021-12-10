@@ -59,7 +59,7 @@ fn day10_part2(input: &str) -> usize {
 	scores[scores.len() / 2]
 }
 
-
+#[cfg(test)]
 const EXAMPLE: &str = "[({(<(())[]>[[{[]{<()<>>
 [(()[<>])]({[<{<<[]>>(
 {([(<{}[<>[]}>{[]{[(<()>

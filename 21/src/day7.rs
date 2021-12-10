@@ -17,7 +17,7 @@ fn test_p1() {
 }
 #[aoc(day7, part2)]
 fn day7_part2(input: &str) -> isize {
-	let mut input: Vec<_> = input.split(",").map(|x|x.parse::<isize>().unwrap()).collect();
+	let input: Vec<_> = input.split(",").map(|x|x.parse::<isize>().unwrap()).collect();
 	let mut out = isize::max_value();
 	for avg in (*input.iter().min().unwrap())..=(*input.iter().max().unwrap()) {
 		let v = input.iter().map(|&x| {

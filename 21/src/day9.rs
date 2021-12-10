@@ -38,7 +38,7 @@ fn day9_part2(input: &str) -> usize {
 			.fold(1, |a, b| a * b)
 }
 
-
+#[cfg(test)]
 const EXAMPLE: &str = "2199943210
 3987894921
 9856789892
