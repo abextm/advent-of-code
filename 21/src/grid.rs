@@ -155,6 +155,10 @@ impl<T> Grid<T> {
 		&self.map[(x % self.width) + (y * self.width)]
 	}
 
+	pub fn get_wrapped(&self, x: isize, y: isize) -> &T {
+		&self.map[x.rem_euclid(self.width as isize) as usize + (y.rem_euclid(self.height as isize) as usize * self.width)]
+	}
+
 	pub fn iter<'a>(&'a self) -> GridIter<'a, T> {
 		GridIter {
 			g: self,
@@ -170,6 +174,17 @@ impl<T> Grid<T>
 		for y in 0..self.height {
 			let start = y * self.width;
 			println!("{:?}", &self.map[start..start + self.width]);
+		}
+	}
+}
+impl Grid<bool> {
+	pub fn print_b(&self) {
+		for y in 0..self.height {
+			let start = y * self.width;
+			for c in &self.map[start..start + self.width] {
+				print!("{}", if *c { "#"} else{"."});
+			}
+			println!("");
 		}
 	}
 }
