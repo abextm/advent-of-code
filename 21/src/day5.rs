@@ -1,3 +1,4 @@
+use crate::grid::Grid;
 use std::cmp::{Ord, Ordering, min, max};
 
 #[aoc(day5, part1)]
@@ -11,7 +12,7 @@ fn day5_part2(input: &str) -> usize {
 }
 
 fn solve(input: &str, part2: bool) -> usize {
-	let lines: Vec<(isize, isize, isize, isize)> = input.trim().lines()
+	let lines: Vec<(usize, usize, usize, usize)> = input.trim().lines()
 		.map(|x| {
 			let mut p = x.split(" -> ")
 				.flat_map(|x| x.split(",")
@@ -20,12 +21,11 @@ fn solve(input: &str, part2: bool) -> usize {
 		}).collect();
 
 	let maxb = (
-		lines.iter().map(|x| max(x.0, x.2)).max().unwrap(),
-		lines.iter().map(|x| max(x.1, x.3)).max().unwrap(),
+		lines.iter().map(|x| max(x.0, x.2)).max().unwrap() + 1,
+		lines.iter().map(|x| max(x.1, x.3)).max().unwrap() + 1,
 	);
 
-	let stride = maxb.0 + 1;
-	let mut arena = vec![0; ((maxb.0+1) * (maxb.1+1)) as usize];
+	let mut grid = Grid::blank(&maxb, 0);
 
 	for (x0, y0, x1, y1) in lines {
 		let dx = -ccmp(&x0, &x1);
@@ -37,19 +37,15 @@ fn solve(input: &str, part2: bool) -> usize {
 			max(x0, x1) - min(x0, x1)
 		} else {
 			max(y0, y1) - min(y0, y1)
-		};
+		} as isize;
 		for i in 0..=d {
-			let x = x0 + (dx*i);
-			let y = y0 + (dy*i);
-			arena[((y * stride) + x) as usize] += 1;
+			let x = x0.wrapping_add((dx*i) as usize);
+			let y = y0.wrapping_add((dy*i) as usize);
+			grid[[x, y]] += 1;
 		}
 	}
 
-//	for y in 0..=maxb.1 {
-//		println!("{:?}", &arena[(y*stride) as usize..((y*stride)+stride) as usize])
-//	}
-
-	arena.iter().filter(|&&x| x > 1).count()
+	grid.values_iter().filter(|&&x| x > 1).count()
 }
 
 fn ccmp<T: Ord>(a: &T, b: &T) -> isize {
