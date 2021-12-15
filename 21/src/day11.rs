@@ -1,27 +1,27 @@
 use crate::grid::{Grid, points, adjacent8_points};
 
-fn inc(grid: &mut Grid<u8>, flashed: &mut Grid<bool>, x: usize, y: usize) {
+fn inc(grid: &mut Grid<u8>, x: usize, y: usize) {
 	let v = &mut grid[[x, y]];
-	*v += 1;
-	let v = *v;
-	if v > 9 && !flashed[[x, y]] {
-		flashed[[x, y]] = true;
-		for (x, y) in adjacent8_points(grid, x, y) {
-			inc(grid, flashed, x, y);
+	if *v < 10 {
+		*v += 1;
+		if *v == 10 {
+			for (x, y) in adjacent8_points(grid, x, y) {
+				inc(grid, x, y);
+			}
 		}
 	}
 }
 
 fn advance(grid: &mut Grid<u8>) -> usize {
-	let mut flashed = Grid::blank(grid, false);
 	for (x, y) in points(grid) {
-		inc(grid, &mut flashed, x, y);
+		inc(grid, x, y);
 	}
 	let mut flashes = 0;
-	for (x, y, &f ) in flashed.iter() {
-		if f {
+	for (x, y) in points(grid) {
+		let v = &mut grid[[x, y]];
+		if *v >= 10 {
 			flashes += 1;
-			grid[[x, y]] = 0;
+			*v = 0;
 		}
 	}
 	flashes
