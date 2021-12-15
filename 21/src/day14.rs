@@ -11,7 +11,7 @@ fn part2(input: &str) -> usize {
 
 fn solve(input: &str, iterations: isize) -> usize {
 	let mut iter = input.trim().split("\n\n");
-	let mut poly = iter.next().unwrap().bytes().map(|b| b - b'A').collect::<Vec<_>>();
+	let poly = iter.next().unwrap().bytes().map(|b| b - b'A').collect::<Vec<_>>();
 	let mut rules = [128; 32*32];
 	for line in iter.next().unwrap().lines() {
 		let mut i = line.split(" -> ");

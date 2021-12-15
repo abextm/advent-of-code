@@ -1,8 +1,10 @@
+use std::usize;
+
 #[derive(Clone)]
 pub struct Grid<T> {
-	pub map: Vec<T>,
-	pub width: usize,
-	pub height: usize,
+	map: Vec<T>,
+	width: usize,
+	height: usize,
 }
 
 pub const ADJ8: [(isize, isize); 8] = [
@@ -26,10 +28,61 @@ pub const ADJ4: [(isize, isize); 4] = [
 pub trait Captures<'a> {}
 impl<'a, T: ?Sized> Captures<'a> for T {}
 
+pub trait Size {
+	fn width(&self) -> usize;
+	fn height(&self) -> usize;
+
+	fn tuple(&self) -> (usize, usize) {
+		(self.width(), self.height())
+	}
+}
+
+impl Size for (usize, usize) {
+	fn width(&self) -> usize {self.0}
+	fn height(&self) -> usize {self.1}
+}
+
+pub fn points<S: Size>(s: &S)
+-> impl Iterator<Item = (usize, usize)> {
+	let (width, height) = s.tuple();
+	(0..height).flat_map(move |y| (0..width).map(move |x| (x, y)))
+}
+
+pub fn adjacent4_points<S: Size>(s: &S, x: usize, y: usize)
+ -> impl Iterator<Item = (usize, usize)> {
+	adjacent_n_points(&ADJ4, s, x, y)
+}
+
+pub fn adjacent8_points<S: Size>(s: &S, x: usize, y: usize)
+ -> impl Iterator<Item = (usize, usize)> {
+	adjacent_n_points(&ADJ8, s, x, y)
+}
+
+#[inline]
+fn adjacent_n_points<S: Size>(adj: &'static [(isize, isize)], s: &S, x: usize, y: usize)
+ -> impl Iterator<Item = (usize, usize)> {
+	let (w, h) = s.tuple();
+	assert!(x < w);
+	assert!(y < h);
+	adj
+		.iter()
+		.filter_map(move |&(dx, dy)| {
+			let ix = x.wrapping_add(dx as usize);
+			let iy = y.wrapping_add(dy as usize);
+			if ix >= w || iy >= h {
+				None
+			} else {
+				Some((ix, iy))
+			}
+		})
+}
+
+
+
 impl<T: Copy> Grid<T> {
-	pub fn blank(width: usize, height: usize, v: T) -> Self {
-		let mut map = Vec::new();
-		map.resize_with(width * height, || v);
+	pub fn blank<S: Size>(size: &S, v: T) -> Self {
+		let (width, height) = size.tuple();
+		let map = vec![v; width * height];
 		Grid { map, width, height }
 	}
 }
@@ -83,19 +136,30 @@ impl<T> Grid<T> {
 		Grid { map, width, height }
 	}
 
-	pub fn get(&self, x: usize, y: usize) -> &T {
+	pub fn from_generator<S: Size, F: FnMut(usize, usize) -> T>(size: &S, mut f: F) -> Self {
+		let map = points(size)
+			.map(|(x, y)| f(x, y))
+			.collect::<Vec<_>>();
+		Grid {
+			map,
+			width: size.width(),
+			height: size.height(),
+		}
+	}
+
+	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<M> {
+		Grid::from_generator(self, move |x, y| f(x, y, &self[[x, y]]))
+	}
+
+	pub fn get_unchecked(&self, x: usize, y: usize) -> &T {
 		&self.map[x + (y * self.width)]
 	}
 
-	pub fn at_mut(&mut self, x: usize, y: usize) -> &mut T {
+	pub fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut T {
 		&mut self.map[x + (y * self.width)]
 	}
 
-	pub fn set(&mut self, x: usize, y: usize, val: T) {
-		self.map[x + (y * self.width)] = val;
-	}
-
-	pub fn get_safe(&self, x: isize, y: isize) -> Option<&T> {
+	pub fn get(&self, x: isize, y: isize) -> Option<&T> {
 		if x < 0 || x >= self.width as isize || y < 0 || y >= self.height as isize {
 			None
 		} else {
@@ -108,13 +172,8 @@ impl<T> Grid<T> {
 		x: usize,
 		y: usize,
 	) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
-		let (ix, iy) = (x as isize, y as isize);
-		ADJ8
-			.iter()
-			.filter_map(move |(dx, dy)| match self.get_safe(ix + dx, iy + dy) {
-				None => None,
-				Some(v) => Some(((ix + dx) as usize, (iy + dy) as usize, v)),
-			})
+		adjacent8_points(self, x, y)
+			.map(move |p| (p.0, p.1, &self[p]))
 	}
 
 	pub fn adjacent4<'a>(
@@ -122,13 +181,8 @@ impl<T> Grid<T> {
 		x: usize,
 		y: usize,
 	) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
-		let (ix, iy) = (x as isize, y as isize);
-		ADJ4
-			.iter()
-			.filter_map(move |(dx, dy)| match self.get_safe(ix + dx, iy + dy) {
-				None => None,
-				Some(v) => Some(((ix + dx) as usize, (iy + dy) as usize, v)),
-			})
+		adjacent4_points(self, x, y)
+			.map(move |p| (p.0, p.1, &self[p]))
 	}
 
 	pub fn line_of_sight8<'a>(
@@ -141,7 +195,7 @@ impl<T> Grid<T> {
 		ADJ8.iter().filter_map(move |(dx, dy)| {
 			for l in 1.. {
 				let (x, y) = (ix + (dx * l), iy + (dy * l));
-				match self.get_safe(x, y) {
+				match self.get(x, y) {
 					Some(v) if !test(&v) => continue,
 					Some(v) => return Some((x as usize, y as usize, v)),
 					None => return None,
@@ -166,6 +220,51 @@ impl<T> Grid<T> {
 			y: 0,
 		}
 	}
+
+	pub fn values_iter<'a>(&'a self) -> impl Iterator<Item = &T> + Captures<'a> {
+		self.map.iter()
+	}
+
+	pub fn width(&self) -> usize {
+		self.width
+	}
+
+	pub fn height(&self) -> usize {
+		self.height
+	}
+}
+
+impl<T> Size for Grid<T> {
+	fn width(&self) -> usize {
+		self.width
+	}
+
+	fn height(&self) -> usize {
+		self.height
+	}
+}
+
+impl<T> std::ops::Index<(usize, usize)> for Grid<T> {
+	type Output = T;
+	fn index(&self, index: (usize, usize)) -> &Self::Output {
+		self.get_unchecked(index.0, index.1)
+	}
+}
+impl<T> std::ops::Index<[usize; 2]> for Grid<T> {
+	type Output = T;
+	fn index(&self, index: [usize; 2]) -> &Self::Output {
+		self.get_unchecked(index[0], index[1])
+	}
+}
+impl<T> std::ops::IndexMut<(usize, usize)> for Grid<T> {
+	fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
+		self.get_unchecked_mut(index.0, index.1)
+	}
+}
+impl<T> std::ops::IndexMut<[usize; 2]> for Grid<T> {
+	fn index_mut(&mut self, index: [usize; 2]) -> &mut T {
+		self.get_unchecked_mut(index[0], index[1])
+	}
 }
 
 impl<T> Grid<T>
@@ -182,7 +281,22 @@ impl Grid<bool> {
 		for y in 0..self.height {
 			let start = y * self.width;
 			for c in &self.map[start..start + self.width] {
-				print!("{}", if *c { "#"} else{"."});
+				print!("{}", if *c {"#"} else {"."});
+			}
+			println!("");
+		}
+	}
+}
+impl Grid<u8> {
+	pub fn print_b(&self) {
+		for y in 0..self.height {
+			let start = y * self.width;
+			for c in &self.map[start..start + self.width] {
+				if *c > 9 {
+					print!("+");
+				} else {
+					print!("{}", c);
+				}
 			}
 			println!("");
 		}
@@ -206,7 +320,7 @@ impl<'a, T> Iterator for GridIter<'a, T> {
 		if self.y >= self.g.height {
 			return None;
 		}
-		let v = (self.x, self.y, self.g.get(self.x, self.y));
+		let v = (self.x, self.y, &self.g[[self.x, self.y]]);
 		self.x += 1;
 		Some(v)
 	}

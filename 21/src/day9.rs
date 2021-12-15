@@ -1,6 +1,7 @@
+use crate::grid::Grid;
 #[aoc(day9, part1)]
 fn day9_part1(input: &str) -> usize {
-	let grid = crate::grid::Grid::from_number_grid(input);
+	let grid = Grid::from_number_grid(input);
 	grid.iter()
 	.filter(|&(x, y, &v)| 
 		grid.adjacent4(x, y).all(|(_, _, &ov)| ov > v))
@@ -10,32 +11,28 @@ fn day9_part1(input: &str) -> usize {
 
 #[aoc(day9, part2)]
 fn day9_part2(input: &str) -> usize {
-	let grid = crate::grid::Grid::from_number_grid(input);
-	let mut sums = crate::grid::Grid::blank(grid.width, grid.height, 1 as usize);
-	grid.iter().for_each(|(x, y, &v)| if v == 9 {
-		sums.set(x, y, 0);
-	});
+	let grid = Grid::from_number_grid(input);
+	let mut sums = grid.map(|_, _, &v| if v == 9 {0} else {1});
 
 	for _ in (0..=9).rev() {
 		grid.iter().for_each(|(x, y, &v)| {
 			if let Some((nx, ny, &nv)) = grid.adjacent4(x, y).min_by_key(|&(_, _, &v)| v) {
 				if nv < v {
-					*sums.at_mut(nx, ny) += *sums.get(x, y);
-					sums.set(x, y, 0);
+					sums[[nx, ny]] += sums[[x, y]];
+					sums[[x, y]] = 0;
 				}
 			}
 		});
 	}
 	
-	let mut v: Vec<_>  = sums.iter()
-		.map(&|(_, _, &v)| v)
+	let mut v: Vec<_>  = sums.values_iter().cloned()
 		.filter(|&v| v > 0)
 		.collect();
 
 	v.sort();
 	v.reverse();
-		v.iter().take(3)
-			.fold(1, |a, b| a * b)
+	v.iter().take(3)
+		.fold(1, |a, b| a * b)
 }
 
 #[cfg(test)]
