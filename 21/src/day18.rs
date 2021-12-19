@@ -1,153 +1,153 @@
 use std::fmt::Debug;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum Number {
-	Number(usize),
-	Pair(Box<(Number, Number)>),
+	Number(u8),
+	Open,
+	Close,
 }
 
-impl Debug for Number {
+#[derive(PartialEq, Eq, Clone)]
+struct Snail (Vec<Number>);
+
+impl Debug for Snail {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			Number::Number(v) => write!(f, "{}", *v),
-			Number::Pair(b) => write!(f, "[{:?},{:?}]", b.0, b.1),
-		}
-	}
-}
-
-#[derive(PartialEq, Eq)]
-enum ExplodeResult {
-	Exploding(Option<usize>, Option<usize>),
-	Same,
-}
-
-impl Number {
-	fn parse(input: &str) -> Self {
-		Number::parse_inner(&mut input.bytes().peekable()).unwrap()
-	}
-	fn parse_inner(input: &mut std::iter::Peekable<std::str::Bytes>) -> Option<Self> {
-		match input.next() {
-			Some(b'[') => {
-				let a = Self::parse_inner(input).unwrap();
-				if Some(b',') != input.next() {
-					panic!();
-				}
-				let b = Self::parse_inner(input).unwrap();
-				if Some(b']') != input.next() {
-					panic!();
-				}
-				Some(Number::Pair((a, b).into()))
-			},
-			Some(a) if a>= b'0' && a <= b'9' => Some(Number::Number((a - b'0') as usize)),
-			None => None,
-			_ => panic!()
-		}
-	}
-
-	fn reduce(mut self) -> Self {
-		loop {
-			while self.explode() {}
-			if !self.split() {
-				return self
+		for v in &self.0 {
+			match v {
+				&Number::Number(v) => write!(f, "{},", v)?,
+				&Number::Open => write!(f, "[")?,
+				&Number::Close => write!(f, "]")?,
 			}
 		}
+		Ok(())
+	}
+}
+
+impl Snail {
+	fn parse(input: &str) -> Self {
+		Snail(input.bytes().filter_map(|x| {
+			match x {
+				b',' => None,
+				b'[' => Some(Number::Open),
+				b']' => Some(Number::Close),
+				v if v >= b'0' && v <= b'9' => Some(Number::Number(v - b'0')),
+				_ => panic!(),
+			}
+		}).collect())
+	}
+
+	fn add(&self, r: &Snail) -> Snail {
+		let mut v = Vec::with_capacity(self.0.len() + r.0.len() + 2);
+		v.push(Number::Open);
+		v.extend_from_slice(&self.0);
+		v.extend_from_slice(&r.0);
+		v.push(Number::Close);
+		let mut v = Snail(v);
+		v.reduce();
+		v
+	}
+
+	fn reduce(&mut self) {
+		while self.explode() || self.split() {}
 	}
 
 	fn explode(&mut self) -> bool {
-		self.explode_inner(0) != ExplodeResult::Same
-	}
-
-	fn explode_inner(&mut self, depth: usize) -> ExplodeResult {
-		match self {
-			Number::Number(_) => ExplodeResult::Same,
-			Number::Pair(b) => {
-				if depth >= 4 {
-					if let &(Number::Number(l), Number::Number(r)) = b.as_ref() {
-						*self = Number::Number(0);
-						return ExplodeResult::Exploding(Some(l), Some(r));
+		let mut depth = 0usize;
+		for i in 0..self.0.len() {
+			match &self.0[i] {
+				&Number::Open => depth += 1,
+				&Number::Close => depth -= 1,
+				&Number::Number(l) if depth > 4 => {
+					if let &Number::Number(r) = &self.0[i + 1] {
+						self.0.splice(i - 1..=i + 2, [Number::Number(0)]);
+						self.add_left(i - 1, l);
+						self.add_right(i - 1, r);
+						return true
 					}
 				}
-				match b.0.explode_inner(depth + 1) {
-					ExplodeResult::Same => (),
-					ExplodeResult::Exploding(l, r) => {
-						if let Some(v) = r {
-							b.1.add_left(v);
-						}
-						return ExplodeResult::Exploding(l, None);
-					}
-				};
-				match b.1.explode_inner(depth + 1) {
-					ExplodeResult::Same => (),
-					ExplodeResult::Exploding(l, r) => {
-						if let Some(v) = l {
-							b.0.add_right(v);
-						}
-						return ExplodeResult::Exploding(None, r);
-					}
-				};
-				return ExplodeResult::Same;
+				_ => (),
+			}
+		}
+		false
+	}
+
+	fn add_right(&mut self, start: usize, val: u8) {
+		for i in (start+1)..self.0.len() {
+			if let Number::Number(n) = &mut self.0[i] {
+				*n += val;
+				return
 			}
 		}
 	}
-
-	fn add_left(&mut self, ov: usize) {
-		match self {
-			Number::Number(v) => *v += ov,
-			Number::Pair(b) => b.0.add_left(ov),
-		}
-	}
-	fn add_right(&mut self, ov: usize) {
-		match self {
-			Number::Number(v) => *v += ov,
-			Number::Pair(b) => b.1.add_right(ov),
+	fn add_left(&mut self, start: usize, val: u8) {
+		for i in (0..start).rev() {
+			if let Number::Number(n) = &mut self.0[i] {
+				*n += val;
+				return
+			}
 		}
 	}
 
 	fn split(&mut self) -> bool {
-		match self {
-			Number::Number(v) => {
-				if *v < 10 {
-					false
-				} else {
-					let v = *v;
-					let a= v / 2;
-					let b = v - a;
-					*self = Number::Pair((Number::Number(a), Number::Number(b)).into());
-					true
+		for i in 0..self.0.len() {
+			if let Number::Number(n) = self.0[i] {
+				if n >= 10 {
+					let a= n / 2;
+					let b = n - a;
+					let new = [
+						Number::Open,
+						Number::Number(a),
+						Number::Number(b),
+						Number::Close,
+					];
+					self.0.splice(i..=i, new);
+					return true
 				}
-			},
-			Number::Pair(b) => b.0.split() || b.1.split(),
+			}
 		}
+		false
 	}
 
 	fn magnitude(&self) -> usize {
-		match self {
-			Number::Number(v) => *v,
-			Number::Pair(p) => p.0.magnitude() * 3 + p.1.magnitude() * 2,
+		let mut shunt = Vec::with_capacity(16);
+		for v in &self.0 {
+			match v {
+				&Number::Open => (),
+				&Number::Number(n) => shunt.push(n as usize),
+				&Number::Close => {
+					let r = shunt.pop().unwrap();
+					let l = shunt.pop().unwrap();
+					shunt.push(l * 3 + r * 2)
+				}
+			}
 		}
+		assert_eq!(shunt.len(), 1);
+		shunt[0]
 	}
 }
 
 #[aoc(day18, part1)]
 fn part1(input: &str) -> usize {
-	let mut it = input.lines().map(|x| Number::parse(x));
+	let mut it = input.lines().map(|x| Snail::parse(x));
 	let v = it.next().unwrap();
-	it.fold(v, |acc, v| Number::Pair((acc, v).into()).reduce()).magnitude()
+	it.fold(v, |acc, v| acc.add(&v)).magnitude()
 }
 
 #[aoc(day18, part2)]
 fn part2(input: &str) -> usize {
-	let input: Vec<_> = input.lines().map(|x| Number::parse(x)).collect();
+	let input: Vec<_> = input.lines().map(|x| Snail::parse(x)).collect();
 	
 	(0..input.len()).flat_map(|a| (0..input.len()).filter_map(move |b| if a != b {Some((a, b))} else {None}))
-		.map(|(a, b)| Number::Pair((input[a].clone(), input[b].clone()).into()).reduce().magnitude())
+		.map(|(a, b)| input[a].add(&input[b]).magnitude())
 		.max()
 		.unwrap()
 }
 
 #[cfg(test)]
 fn assert_reduces_to(a: &str, b: &str) {
-	assert_eq!(Number::parse(a).reduce(), Number::parse(b));
+	let mut v = Snail::parse(a);
+	v.reduce();
+	assert_eq!(v, Snail::parse(b));
 }
 
 #[test]
