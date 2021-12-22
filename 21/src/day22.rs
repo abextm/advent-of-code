@@ -1,13 +1,11 @@
-use std::ops::RangeInclusive;
-
-type Range1D = RangeInclusive<isize>;
+type Range1D = (isize, isize);
 type Range3D = [Range1D; 3];
 
 fn r3d_union(mut a: Range3D, b: &Range3D) -> Option<Range3D> {
 	for dim in 0..a.len() {
-		let v =*a[dim].start().max(b[dim].start())..=*a[dim].end().min(b[dim].end());
-		if v.is_empty() {
-			return None;
+		let v = (a[dim].0.max(b[dim].0), a[dim].1.min(b[dim].1));
+		if v.0 >= v.1 {
+			return None
 		}
 		a[dim] = v;
 	}
@@ -17,39 +15,39 @@ fn r3d_union(mut a: Range3D, b: &Range3D) -> Option<Range3D> {
 
 fn r1d_remove(include: &Range1D, exclude: &Range1D) -> [Range1D; 2] {
 	[
-		*include.start()..=*exclude.start()-1,
-		*exclude.end()+1..=*include.end(),
+		(include.0, exclude.0),
+		(exclude.1, include.1),
 	]
 }
 
 fn r3d_rem_dim(include: &mut Range3D, exclude: &Range3D, out: &mut [Option<Range3D>], dim: usize) {
 	for (i, x) in r1d_remove(&include[dim], &exclude[dim]).iter().enumerate() {
-		if x.is_empty() {
+		if x.0 >= x.1 {
 			continue;
 		}
-		let mut v = include.clone();
-		v[dim] = x.clone();
+		let mut v = *include;
+		v[dim] = *x;
 		out[i] = Some(v);
 	}
-	include[dim] = exclude[dim].clone();
+	include[dim] = exclude[dim];
 }
 
 fn r3d_remove(include: &Range3D, exclude: &Range3D) -> [Option<Range3D>; 6] {
-	if let Some(exclude) = r3d_union(include.clone(), exclude) {
-		let mut include = include.clone();
-		let mut out = [None, None, None, None, None, None];
+	let mut out = [None; 6];
+	if let Some(exclude) = r3d_union(*include, exclude) {
+		let mut include = *include;
 		r3d_rem_dim(&mut include, &exclude, &mut out[0..], 0);
 		r3d_rem_dim(&mut include, &exclude, &mut out[2..], 1);
 		r3d_rem_dim(&mut include, &exclude, &mut out[4..], 2);
-		out
 	} else {
 		// exclude does not include include
-		[Some(include.clone()), None, None, None, None, None]
+		out[0] = Some(*include);
 	}
+	out
 }
 
 fn r3d_volume(v: &Range3D) -> isize {
-	v.iter().map(|x| (*x.end()+1) - *x.start()).reduce(|acc, v| acc * v).unwrap()
+	v.iter().map(|x| x.1 - x.0).reduce(|acc, v| acc * v).unwrap()
 }
 
 fn calc_on(stack: &[(bool, Range3D)], mask: &Range3D) -> isize {
@@ -58,12 +56,12 @@ fn calc_on(stack: &[(bool, Range3D)], mask: &Range3D) -> isize {
 	}
 	let (on, range) = stack.last().unwrap();
 	let mut sum = 0;
-	if let Some(matching_range) = r3d_union(range.clone(), mask) {
+	if let Some(matching_range) = r3d_union(*range, mask) {
 		if *on {
 			sum += r3d_volume(&matching_range);
 		}
 	}
-	for bit in r3d_remove(mask, range).iter().filter_map(|x| x.clone()) {
+	for bit in r3d_remove(mask, range).iter().filter_map(|x| *x) {
 		sum += calc_on(&stack[..stack.len() - 1], &bit);
 	}
 	sum
@@ -71,16 +69,16 @@ fn calc_on(stack: &[(bool, Range3D)], mask: &Range3D) -> isize {
 
 #[aoc(day22, part1)]
 fn part1(input: &str) -> isize {
-	solve(input, -50..=50)
+	solve(input, (-50, 51))
 }
 
 #[aoc(day22, part2)]
 fn part2(input: &str) -> isize {
-	solve(input, std::isize::MIN..=std::isize::MAX)
+	solve(input, (std::isize::MIN, std::isize::MAX))
 }
 
 fn solve(input: &str, range: Range1D) -> isize {
-	let mask: Range3D = [range.clone(), range.clone(), range.clone()];
+	let mask: Range3D = [range; 3];
 	let regex = regex::Regex::new(r"^(on|off) x=([0-9-]+)\.\.([0-9-]+),y=([0-9-]+)\.\.([0-9-]+),z=([0-9-]+)\.\.([0-9-]+)$").unwrap();
 	let stack = input.lines().map(|line| {
 		let r = regex.captures(line).expect(line);
@@ -89,9 +87,9 @@ fn solve(input: &str, range: Range1D) -> isize {
 		(
 			is_on,
 			[
-				vit.next().unwrap()..=vit.next().unwrap(),
-				vit.next().unwrap()..=vit.next().unwrap(),
-				vit.next().unwrap()..=vit.next().unwrap(),
+				(vit.next().unwrap(), vit.next().unwrap() + 1),
+				(vit.next().unwrap(), vit.next().unwrap() + 1),
+				(vit.next().unwrap(), vit.next().unwrap() + 1),
 			]
 		)
 	}).collect::<Vec<_>>();
