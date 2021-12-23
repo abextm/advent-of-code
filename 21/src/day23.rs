@@ -1,32 +1,35 @@
 use std::{cmp::Ordering, collections::HashMap, collections::BinaryHeap};
+use regex::Regex;
+
+const DEBUG: bool = false;
 
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Hash)]
-struct RoomState {
-	rooms: [[u8; 4]; 4],
+struct RoomState<const N: usize> {
+	rooms: [[u8; N]; 4],
 	hallway: [u8; 7],
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-struct State {
+struct State<const N: usize> {
 	cost: usize,
 	timestamp: usize,
-	state: RoomState,
+	state: RoomState<N>,
 }
 
-impl Ord for State {
+impl<const N: usize> Ord for State<N> {
 	fn cmp(&self, other: &Self) -> Ordering {
 		other.cost.cmp(&self.cost)
 			.then_with(|| self.timestamp.cmp(&other.timestamp))
 	}
 }
 
-impl PartialOrd for State {
+impl<const N: usize> PartialOrd for State<N> {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 		Some(self.cmp(other))
 	}
 }
 
-fn swap(from: &RoomState, color: u8, hw_index: usize, rm: usize, rm_index: usize, into: &mut Vec<State>) {
+fn swap<const N: usize>(from: &RoomState<N>, color: u8, hw_index: usize, rm: usize, rm_index: usize, into: &mut Vec<State<N>>) {
 	let mut state = *from;
 	std::mem::swap(&mut state.hallway[hw_index], &mut state.rooms[rm][rm_index]);
 	let from = (HALLWAY_POS[hw_index], 0);
@@ -79,7 +82,7 @@ const RM_POS: [isize; 4] = [
 
 const NONE: u8 = b'.';
 
-fn possible_moves(from: &RoomState, into: &mut Vec<State>) {
+fn possible_moves<const N: usize>(from: &RoomState<N>, into: &mut Vec<State<N>>) {
 	for (hw_index, &a) in from.hallway.iter().enumerate() {
 		if a == NONE {
 			continue;
@@ -113,7 +116,7 @@ fn possible_moves(from: &RoomState, into: &mut Vec<State>) {
 	}
 }
 
-fn cost(from: &RoomState, to: &RoomState) -> Option<usize> {
+fn cost<const N: usize>(from: &RoomState<N>, to: &RoomState<N>) -> Option<usize> {
 	let mut dist = HashMap::new();
 	let mut prev = HashMap::new();
 	let mut heap = BinaryHeap::new();
@@ -128,13 +131,15 @@ fn cost(from: &RoomState, to: &RoomState) -> Option<usize> {
 	let mut into = Vec::new();
 	while let Some(State{cost, timestamp: _, state}) = heap.pop() {
 		if state == *to {
-			let mut v = *to;
-			loop {
-				println!("{:?}", v);
-				if let Some(pv) = prev.get(&v) {
-					v = *pv;
-				} else {
-					break;
+			if DEBUG {
+				let mut v = *to;
+				loop {
+					println!("{:?}", v);
+					if let Some(pv) = prev.get(&v) {
+						v = *pv;
+					} else {
+						break;
+					}
 				}
 			}
 			return Some(cost);
@@ -161,29 +166,41 @@ fn cost(from: &RoomState, to: &RoomState) -> Option<usize> {
 	None
 }
 
-const TARGET: RoomState = RoomState {
-	rooms: [
-		[b'A'; 4],
-		[b'B'; 4],
-		[b'C'; 4],
-		[b'D'; 4],
-	],
-	hallway: [NONE; 7],
-};
-
-#[aoc(day23, part2)]
-fn part2(input: &str) -> usize {
-	let start = RoomState{
-		rooms: p2ify([
-			[b'C', b'B'],
-			[b'D', b'A'],
-			[b'A', b'D'],
-			[b'B', b'C'],
-		]),
+const fn target<const N: usize>() -> RoomState<N> {
+	RoomState {
+		rooms: [
+			[b'A'; N],
+			[b'B'; N],
+			[b'C'; N],
+			[b'D'; N],
+		],
 		hallway: [NONE; 7],
-	};
+	}
+}
 
-	cost(&start, &TARGET).expect("no path")
+fn parse(input: &str) -> [[u8; 2]; 4] {
+	let mut out = [[b'.'; 2]; 4];
+	let regex = Regex::new(r"#([A-Z])#([A-Z])#([A-Z])#([A-Z])#").unwrap();
+	for (room_index, line) in input.lines().skip(2).take(2).enumerate() {
+		for (room, val) in regex.captures(line).expect(line).iter().skip(1).enumerate() {
+			let val = val.unwrap().as_str();
+			assert_eq!(val.len(), 1);
+			out[room][room_index] = val.as_bytes()[0];
+		}
+	}
+	out
+}
+
+fn solve<const N: usize>(rooms: [[u8; N]; 4]) -> usize {
+	cost(&RoomState{
+		rooms,
+		hallway: [NONE; 7],
+	}, &target()).expect("no path")
+}
+
+#[aoc(day23, part1)]
+fn part1(input: &str) -> usize {
+	solve(parse(input))
 }
 
 fn p2ify(a: [[u8; 2]; 4]) -> [[u8; 4]; 4] {
@@ -195,17 +212,23 @@ fn p2ify(a: [[u8; 2]; 4]) -> [[u8; 4]; 4] {
 	]
 }
 
+#[aoc(day23, part2)]
+fn part2(input: &str) -> usize {
+	solve(p2ify(parse(input)))
+}
+
+#[cfg(test)]
+const EXAMPLE: &str = "#############
+#...........#
+###B#C#B#D###
+  #A#D#C#A#
+  #########";
+
 #[test]
 fn test() {
-	let start = RoomState{
-		rooms: p2ify([
-			[b'B', b'A'],
-			[b'C', b'D'],
-			[b'B', b'C'],
-			[b'D', b'A'],
-		]),
-		hallway: [NONE; 7],
-	};
-
-	assert_eq!(cost(&start, &TARGET), Some(44169));
+	// slow
+	if DEBUG {
+		assert_eq!(part1(EXAMPLE), 12521);
+		assert_eq!(part2(EXAMPLE), 44169);
+	}
 }
