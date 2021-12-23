@@ -23,6 +23,8 @@ pub mod day19;
 pub mod day20;
 pub mod day21;
 pub mod day22;
+pub mod day23p1;
+pub mod day23p2;
 
 pub mod grid;
 
