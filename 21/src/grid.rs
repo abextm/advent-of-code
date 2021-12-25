@@ -85,6 +85,10 @@ impl<T: Copy> Grid<T> {
 		let map = vec![v; width * height];
 		Grid { map, width, height }
 	}
+
+	pub fn fill(&mut self, v: T) {
+		self.map.fill(v);
+	}
 }
 /*
 impl <T: Copy + Default> Grid<T> {
@@ -212,6 +216,9 @@ impl<T> Grid<T> {
 	pub fn get_wrapped(&self, x: isize, y: isize) -> &T {
 		&self.map[x.rem_euclid(self.width as isize) as usize + (y.rem_euclid(self.height as isize) as usize * self.width)]
 	}
+	pub fn get_wrapped_mut(&mut self, x: isize, y: isize) -> &mut T {
+		&mut self.map[x.rem_euclid(self.width as isize) as usize + (y.rem_euclid(self.height as isize) as usize * self.width)]
+	}
 
 	pub fn iter<'a>(&'a self) -> GridIter<'a, T> {
 		GridIter {
@@ -297,6 +304,16 @@ impl Grid<u8> {
 				} else {
 					print!("{}", c);
 				}
+			}
+			println!("");
+		}
+	}
+	pub fn print_c(&self) {
+		for y in 0..self.height {
+			let start = y * self.width;
+			for c in &self.map[start..start + self.width] {
+				let c = std::char::from_u32(*c as u32).unwrap();
+				print!("{}", c);
 			}
 			println!("");
 		}
