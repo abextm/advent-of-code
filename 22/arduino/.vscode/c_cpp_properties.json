@@ -1,0 +1,60 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "/home/abex/code/advent-of-code/22/arduino/include",
+                "/home/abex/code/advent-of-code/22/arduino/src",
+                "/home/abex/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "/home/abex/.platformio/packages/framework-arduino-avr/variants/flora",
+                "/home/abex/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "/home/abex/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "/home/abex/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "/home/abex/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                "/home/abex/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/home/abex/code/advent-of-code/22/arduino/include",
+                    "/home/abex/code/advent-of-code/22/arduino/src",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/variants/flora",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    "/home/abex/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60105",
+                "ARDUINO_AVR_FLORA8",
+                "F_CPU=8000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "USB_VID=0x239A",
+                "USB_PID=0x8004",
+                "USB_PRODUCT=\"Adafruit Flora\"",
+                "USB_MANUFACTURER=\"Adafruit\"",
+                "__AVR_ATmega32U4__",
+                ""
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "compilerPath": "/home/abex/.platformio/packages/toolchain-atmelavr/bin/avr-gcc",
+            "compilerArgs": [
+                "-mmcu=atmega32u4",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}

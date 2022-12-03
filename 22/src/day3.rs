@@ -13,8 +13,6 @@ fn day3_part1(input: &str) -> usize {
 		} else {
 			same - b'a' + 1
 		}) as usize;
-		println!("{:?} {:?}", a, b);
-		println!("{:?} {:?}", same as char, score);
 		score
 	}).sum()
 }

@@ -5,14 +5,7 @@ fn day2_part1(input: &str) -> usize {
 		let me = line.bytes().nth(2).unwrap() - b'X';
 
 		let score = me + 1;
-
-		let win = if me == opponent {
-			3
-		} else if me == (opponent + 1) % 3 {
-			6
-		} else {
-			0
-		};
+		let win = 3 * ((me + 4 - opponent) % 3);
 
 		return (win + score) as usize;
 	}).sum()
