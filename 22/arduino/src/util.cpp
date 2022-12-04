@@ -28,8 +28,10 @@ bool read_until(String *into, char delimiter, size_t max_len) {
 		if (c == -1) {
 			continue;
 		}
-		if (c == delimiter) {
+		if (c == '\n') {
 			line_no++;
+		}
+		if (c == delimiter) {
 			return true;
 		}
 		if (c == '\0') {
