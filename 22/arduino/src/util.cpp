@@ -15,6 +15,14 @@ void loop()
 	for (; Serial; );
 }
 
+uint8_t read_blocking() {
+	for (;;) {
+		uint8_t c = Serial.read();
+		if (c != -1) {
+			return c;
+		}
+	}
+}
 
 int16_t line_no = 1;
 bool hit_eol = false;
@@ -24,10 +32,7 @@ bool read_until(String *into, char delimiter, size_t max_len) {
 		return false;
 	}
 	for (; into->length() < max_len; ) {
-		char c = Serial.read();
-		if (c == -1) {
-			continue;
-		}
+		char c = read_blocking();
 		if (c == '\n') {
 			line_no++;
 		}

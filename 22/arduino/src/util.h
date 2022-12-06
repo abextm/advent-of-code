@@ -10,6 +10,7 @@
 #endif
 
 void solve();
+uint8_t read_blocking();
 bool read_until(String *into, char delimiter = '\n', size_t max_len = 32);
 
 #define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
