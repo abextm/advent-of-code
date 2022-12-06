@@ -8,7 +8,12 @@ void loop()
 {
 	for (; !Serial; );
 	
+	unsigned long start = millis();
 	solve();
+	unsigned long duration = millis() - start;
+	Serial.print("runtime: ");
+	Serial.print(duration);
+	Serial.print("ms");
 
 	Serial.print('\0');
 	Serial.flush();
@@ -16,9 +21,20 @@ void loop()
 }
 
 uint8_t read_blocking() {
+#ifdef __AVR__
+	cli();
+	uint8_t cb = TCCR0B;
+	TCCR0B &= ~((1 << CS00) | (1 << CS01) | (1 << CS02));
+	sei();
+#endif
 	for (;;) {
 		uint8_t c = Serial.read();
 		if (c != -1) {
+#ifdef __AVR__
+	cli();
+	TCCR0B = cb;
+	sei();
+#endif
 			return c;
 		}
 	}
