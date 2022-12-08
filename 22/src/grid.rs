@@ -238,6 +238,16 @@ impl<T> Grid<T> {
 	pub fn height(&self) -> usize {
 		self.height
 	}
+
+	pub fn directions_from<'a>(&'a self, x: usize, y: usize) -> impl Iterator<Item = impl Iterator<Item = (usize, usize, &'a T)>> {
+		let point = [x, y];
+		[
+			GridRayIter{g: self, point, end: 0, step: -1, axis: 0},
+			GridRayIter{g: self, point, end: self.width - 1, step: 1, axis: 0},
+			GridRayIter{g: self, point, end: 0, step: -1, axis: 1},
+			GridRayIter{g: self, point, end: self.height - 1, step: 1, axis: 1},
+		].into_iter()
+	}
 }
 
 impl<T> Size for Grid<T> {
@@ -339,5 +349,28 @@ impl<'a, T> Iterator for GridIter<'a, T> {
 		let v = (self.x, self.y, &self.g[[self.x, self.y]]);
 		self.x += 1;
 		Some(v)
+	}
+}
+
+pub struct GridRayIter<'a, T> {
+	g: &'a Grid<T>,
+	point: [usize; 2],
+	end: usize,
+	step: i8,
+	axis: u8,
+}
+
+impl<'a, T> Iterator for GridRayIter<'a, T> {
+	type Item = (usize, usize, &'a T);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let c = &mut self.point[self.axis as usize];
+		if *c == self.end {
+			return None
+		}
+		*c = c.wrapping_add_signed(self.step as isize);
+		drop(c);
+
+		Some((self.point[0], self.point[1], &self.g[self.point]))
 	}
 }
