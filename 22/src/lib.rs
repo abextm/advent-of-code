@@ -5,6 +5,9 @@ extern crate aoc_runner;
 
 mod iter_utils;
 
+#[allow(dead_code)]
+mod grid;
+
 mod prelude {
 	pub use crate::iter_utils::{TakeN, IterFromStr};
 }
@@ -16,5 +19,6 @@ pub mod day4;
 pub mod day5;
 pub mod day6;
 pub mod day7;
+pub mod day8;
 
 aoc_lib! {year=2022}
