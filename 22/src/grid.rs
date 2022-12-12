@@ -329,6 +329,15 @@ impl Grid<u8> {
 	}
 }
 
+impl <T> Grid<T>
+	where T: std::cmp::PartialEq {
+	pub fn find(&self, needle: &T) -> Option<(usize, usize)> {
+		self.iter()
+			.find(|&(_, _, v)| v == needle)
+			.map(|(x, y, _)| (x, y))
+	}
+}
+
 pub struct GridIter<'a, T> {
 	g: &'a Grid<T>,
 	x: usize,
