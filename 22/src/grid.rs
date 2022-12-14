@@ -291,41 +291,28 @@ impl<T> Grid<T>
 			println!("{:?}", &self.map[start..start + self.width]);
 		}
 	}
-}
-impl Grid<bool> {
-	pub fn print_b(&self) {
+
+	pub fn print_mapped<F: Fn(&T) -> char>(&self, convert: F) {
 		for y in 0..self.height {
 			let start = y * self.width;
 			for c in &self.map[start..start + self.width] {
-				print!("{}", if *c {"#"} else {"."});
+				print!("{}", convert(c));
 			}
 			println!("");
 		}
+	}
+}
+impl Grid<bool> {
+	pub fn print_b(&self) {
+		self.print_mapped(|&c| if c {'#'} else {'.'});
 	}
 }
 impl Grid<u8> {
 	pub fn print_b(&self) {
-		for y in 0..self.height {
-			let start = y * self.width;
-			for c in &self.map[start..start + self.width] {
-				if *c > 9 {
-					print!("+");
-				} else {
-					print!("{}", c);
-				}
-			}
-			println!("");
-		}
+		self.print_mapped(|&v| if v > 9 { '+' } else { (v + b'0') as char });
 	}
 	pub fn print_c(&self) {
-		for y in 0..self.height {
-			let start = y * self.width;
-			for c in &self.map[start..start + self.width] {
-				let c = std::char::from_u32(*c as u32).unwrap();
-				print!("{}", c);
-			}
-			println!("");
-		}
+		self.print_mapped(|&v| v as char);
 	}
 }
 
