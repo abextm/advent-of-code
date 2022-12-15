@@ -48,12 +48,12 @@ fn day14_part1(input: &str) -> usize {
 #[aoc(day14, part2)]
 fn day14_part2(input: &str) -> usize {
 	let mut grid = Grid::blank(&(700, 200), 0u8);
-	let mut maxY = 0;
+	let mut max_y = 0;
 	for line in input.lines() {
 		let mut points = line.split(" -> ").map(|bit| bit.split(',').must_parse::<usize>().take_n::<2>().unwrap());
 		let mut pt = points.next().unwrap();
 		for next in points {
-			maxY = maxY.max(pt[1].max(next[1]));
+			max_y = max_y.max(pt[1].max(next[1]));
 			for x in pt[0].min(next[0])..=pt[0].max(next[0]) {
 				for y in pt[1].min(next[1])..=pt[1].max(next[1]) {
 					grid[[x, y]] = 1;
@@ -63,7 +63,7 @@ fn day14_part2(input: &str) -> usize {
 			pt = next;
 		}
 	}
-	let floor = 2 + maxY;
+	let floor = 2 + max_y;
 	for x in 0..grid.width() {
 		grid[[x, floor]] = 3;
 	}
