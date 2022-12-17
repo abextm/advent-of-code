@@ -124,7 +124,7 @@ impl<T> Grid<T> {
 		let width = input
 			.iter()
 			.position(|&i| i == '\n' as u8)
-			.expect("no newlines in input");
+			.unwrap_or(input.len());
 		// +1 for newlines
 		let height = (input.len() + 1) / (width + 1);
 		let map: Vec<T> = input
