@@ -35,7 +35,10 @@ struct TopGrid {
 }
 
 impl TopGrid {
-	fn collides(&self, rock: &Rock, x: usize, y: isize) -> bool {
+	fn collides(&self, rock: &Rock, x: isize, y: isize) -> bool {
+		if y > self.height {
+			return false;
+		}
 		let ry = y - self.bottom;
 		!rock.bits.iter().enumerate()
 			.all(|(dy, line)| {
@@ -50,11 +53,12 @@ impl TopGrid {
 			})
 	}
 
-	fn insert(&mut self, rock: &Rock, x: usize, y: isize) {
+	fn insert(&mut self, rock: &Rock, x: isize, y: isize) {
 		let top = (y + rock.bits.len() as isize) - self.bottom;
 		while (self.rows.len() as isize) < top {
 			self.rows.push_back(0);
 		}
+		let x = x as usize;
 
 		rock.bits.iter().enumerate()
 			.for_each(|(dy, line)| {
@@ -75,21 +79,16 @@ impl TopGrid {
 		}
 	}
 
-	fn iterate(&mut self, rocks: &mut Cycle<Rock>, input: &mut Cycle<u8>) -> [usize; 2] {
+	fn iterate(&mut self, rocks: &mut Cycle<Rock>, input: &mut Cycle<i8>) {
 		let rock = rocks.next();
 		let mut x = 2;
 		let mut y = self.height + 3 as isize;
-		let max_x = 7 - rock.width;
+		let max_x = 7 - rock.width as isize;
 		loop {
 			let old_x = x;
-			let mov = input.next();
-			match mov {
-				b'>' => if x < max_x { x += 1 },
-				b'<' => if x > 0 { x -= 1 },
-				_ => panic!(),
-			};
+			x += *input.next() as isize;
 
-			if self.collides(&rock, x, y) {
+			if x < 0 || x > max_x || self.collides(&rock, x, y) {
 				x = old_x;
 			}
 
@@ -109,7 +108,7 @@ impl TopGrid {
 						}
 						println!("");
 					}*/
-					return [x, y as usize];
+					return;
 			}
 		}
 	}
@@ -124,19 +123,33 @@ impl TopGrid {
 	}
 }
 
+fn convert_input(input: &str) -> Vec<i8> {
+	input.chars()
+		.map(|c| match c {
+			'>' => 1,
+			'<' => -1,
+			_ => panic!(),
+		}).collect()
+}
+
 #[aoc(day17, part1)]
 fn day17_part1(input: &str) -> isize {
-	solve(input, 2022)
+	let mut rocks = Cycle::new(ROCKS);
+	let input = convert_input(input);
+	let mut input = Cycle::new(&input);
+	let mut state = TopGrid::new();
+	for _ in 0..2022 {
+		state.iterate(&mut rocks, &mut input);
+	}
+	state.height
 }
 
 #[aoc(day17, part2)]
 fn day17_part2(input: &str) -> isize {
-	solve(input, 1000000000000)
-}
-
-fn solve(input: &str, iterations: usize) -> isize {
+	let iterations = 1000000000000;
 	let mut rocks = Cycle::new(ROCKS);
-	let mut input = Cycle::new(input.as_bytes());
+	let input = convert_input(input);
+	let mut input = Cycle::new(&input);
 
 	let mut state = TopGrid::new();
 
