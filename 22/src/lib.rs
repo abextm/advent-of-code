@@ -27,5 +27,19 @@ pub mod day12;
 pub mod day13;
 pub mod day14;
 pub mod day15;
+pub mod day16;
 
 aoc_lib! {year=2022}
+
+use regex::Regex;
+use crate::iter_utils::TakeN;
+pub fn re_captures<'a, const N: usize>(v: &Regex, str: &'a str) -> Option<[&'a str; N]> {
+	v.captures(str)
+		.map(|c| {
+			c.iter()
+				.skip(1)
+				.map(|x| x.unwrap().as_str())
+				.take_n::<N>()
+				.unwrap()
+		})
+}
