@@ -1,8 +1,11 @@
 use std::usize;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Clone)]
-pub struct Grid<T> {
-	map: Vec<T>,
+pub struct Grid<A: Deref<Target = [T]>, T> {
+	map: A,
+	offset: usize,
+	stride: usize,
 	width: usize,
 	height: usize,
 }
@@ -78,47 +81,45 @@ fn adjacent_n_points<S: Size>(adj: &'static [(isize, isize)], s: &S, x: usize, y
 }
 
 
-impl<T: Copy> Grid<T> {
+impl<T: Copy> Grid<Vec<T>, T> {
 	pub fn blank<S: Size>(size: &S, v: T) -> Self {
 		let (width, height) = size.tuple();
 		let map = vec![v; width * height];
-		Grid { map, width, height }
+		Grid { map, width, height, offset: 0, stride: width }
 	}
+}
 
+impl<A: DerefMut<Target = [T]>, T: Copy> Grid<A, T> {
 	pub fn fill(&mut self, v: T) {
 		self.map.fill(v);
 	}
 }
-/*
-impl <T: Copy + Default> Grid<T> {
-	pub fn flipleftright(&self) -> Self {
-		let mut out = Grid::blank(self.width, self.height, Default::default());
-		for y in 0..self.height {
-			for x in 0..self.width {
-				out.set(self.width - x - 1, y, self.get(x, y));
-			}
-		}
-		out
-	}
 
-	pub fn rotate(&self) -> Self {
-		let mut out = Grid::blank(self.height, self.width, Default::default());
-		for y in 0..self.height {
-			for x in 0..self.width {
-				out.set(y, self.width - x - 1, self.get(x, y));
-			}
-		}
-		out
-	}
-}*/
-
-impl Grid<u8> {
+impl Grid<Vec<u8>, u8> {
 	pub fn from_number_grid(input: &str) -> Self {
 		Self::from_str_with_mapper(input, |x| *x - '0' as u8)
 	}
 }
 
-impl<T> Grid<T> {
+impl<'a> Grid<&'a [u8], u8> {
+	pub fn from_char_grid(input: &'a str) -> Self {
+		let input = input.as_bytes();
+		let width = input
+			.iter()
+			.position(|&i| i == '\n' as u8)
+			.unwrap_or(input.len());
+		let stride = width + 1;
+		Grid {
+			map: input,
+			offset: 0,
+			height: input.len() / stride,
+			width,
+			stride,
+		}
+	}
+}
+
+impl<T> Grid<Vec<T>, T> {
 	pub fn from_str_with_mapper<F: FnMut(&u8) -> T>(input: &str, f: F) -> Self {
 		let input = input.as_bytes();
 		let width = input
@@ -136,7 +137,7 @@ impl<T> Grid<T> {
 		if map.len() != size {
 			panic!("bad input: {} != {}", map.len(), size);
 		}
-		Grid { map, width, height }
+		Grid { map, width, height, offset: 0, stride: width }
 	}
 
 	pub fn from_generator<S: Size, F: FnMut(usize, usize) -> T>(size: &S, mut f: F) -> Self {
@@ -146,27 +147,32 @@ impl<T> Grid<T> {
 		Grid {
 			map,
 			width: size.width(),
+			stride: size.width(),
 			height: size.height(),
+			offset: 0,
 		}
 	}
 
-	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<M> {
+	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<Vec<M>, M> {
 		Grid::from_generator(self, move |x, y| f(x, y, &self[[x, y]]))
+	}
+}
+
+impl<A: Deref<Target = [T]>, T> Grid<A, T> {
+	#[inline]
+	fn index(&self, x: usize, y: usize) -> usize {
+		self.offset + x + y * self.stride
 	}
 
 	pub fn get_unchecked(&self, x: usize, y: usize) -> &T {
-		&self.map[x + (y * self.width)]
-	}
-
-	pub fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut T {
-		&mut self.map[x + (y * self.width)]
+		&self.map[self.index(x, y)]
 	}
 
 	pub fn get(&self, x: isize, y: isize) -> Option<&T> {
 		if x < 0 || x >= self.width as isize || y < 0 || y >= self.height as isize {
 			None
 		} else {
-			Some(&self.map[x as usize + (y as usize * self.width)])
+			Some(&self.map[self.index(x as usize, y as usize)])
 		}
 	}
 
@@ -208,27 +214,25 @@ impl<T> Grid<T> {
 		})
 	}
 
-	pub fn get_wrapped_x(&self, x: usize, y: usize) -> &T {
-		&self.map[(x % self.width) + (y * self.width)]
+	// may be faster when finding a small number of elements than .iter().filter
+	pub fn filter_enumerate<'a, P: FnMut(&T) -> bool>(&'a self, mut predicate: P) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
+		self.map[self.offset..self.offset + (self.stride * self.height)].iter()
+			.enumerate()
+			.filter(move |(_, v)| predicate(v))
+			.map(|(i, v)| (i % self.stride, i / self.stride, v))
+			.filter(|&(x, _y, _v)| x < self.width)
 	}
 
 	pub fn get_wrapped(&self, x: isize, y: isize) -> &T {
-		&self.map[x.rem_euclid(self.width as isize) as usize + (y.rem_euclid(self.height as isize) as usize * self.width)]
-	}
-	pub fn get_wrapped_mut(&mut self, x: isize, y: isize) -> &mut T {
-		&mut self.map[x.rem_euclid(self.width as isize) as usize + (y.rem_euclid(self.height as isize) as usize * self.width)]
+		&self.map[self.index(x.rem_euclid(self.width as isize) as usize, y.rem_euclid(self.height as isize) as usize)]
 	}
 
-	pub fn iter<'a>(&'a self) -> GridIter<'a, T> {
+	pub fn iter<'a>(&'a self) -> GridIter<'a, A, T> {
 		GridIter {
 			g: self,
 			x: 0,
 			y: 0,
 		}
-	}
-
-	pub fn values_iter<'a>(&'a self) -> impl Iterator<Item = &T> + Captures<'a> {
-		self.map.iter()
 	}
 
 	pub fn width(&self) -> usize {
@@ -250,7 +254,18 @@ impl<T> Grid<T> {
 	}
 }
 
-impl<T> Size for Grid<T> {
+impl<A: DerefMut<Target=[T]>, T> Grid<A, T> {
+	pub fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut T {
+		let index = self.index(x, y);
+		&mut self.map[index]
+	}
+	pub fn get_wrapped_mut(&mut self, x: isize, y: isize) -> &mut T {
+		let index = self.index(x.rem_euclid(self.width as isize) as usize, y.rem_euclid(self.height as isize) as usize);
+		&mut self.map[index]
+	}
+}
+
+impl<A: Deref<Target = [T]>, T> Size for Grid<A, T> {
 	fn width(&self) -> usize {
 		self.width
 	}
@@ -260,30 +275,30 @@ impl<T> Size for Grid<T> {
 	}
 }
 
-impl<T> std::ops::Index<(usize, usize)> for Grid<T> {
+impl<A: Deref<Target = [T]>, T> std::ops::Index<(usize, usize)> for Grid<A, T> {
 	type Output = T;
 	fn index(&self, index: (usize, usize)) -> &Self::Output {
 		self.get_unchecked(index.0, index.1)
 	}
 }
-impl<T> std::ops::Index<[usize; 2]> for Grid<T> {
+impl<A: Deref<Target = [T]>, T> std::ops::Index<[usize; 2]> for Grid<A, T> {
 	type Output = T;
 	fn index(&self, index: [usize; 2]) -> &Self::Output {
 		self.get_unchecked(index[0], index[1])
 	}
 }
-impl<T> std::ops::IndexMut<(usize, usize)> for Grid<T> {
+impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A, T> {
 	fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
 		self.get_unchecked_mut(index.0, index.1)
 	}
 }
-impl<T> std::ops::IndexMut<[usize; 2]> for Grid<T> {
+impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A, T> {
 	fn index_mut(&mut self, index: [usize; 2]) -> &mut T {
 		self.get_unchecked_mut(index[0], index[1])
 	}
 }
 
-impl<T> Grid<T>
+impl<A: Deref<Target = [T]>, T> Grid<A, T>
 	where [T]: std::fmt::Debug {
 	pub fn print(&self) {
 		for y in 0..self.height {
@@ -302,12 +317,12 @@ impl<T> Grid<T>
 		}
 	}
 }
-impl Grid<bool> {
+impl<A: Deref<Target = [bool]>> Grid<A, bool> {
 	pub fn print_b(&self) {
 		self.print_mapped(|&c| if c {'#'} else {'.'});
 	}
 }
-impl Grid<u8> {
+impl<A: Deref<Target = [u8]>> Grid<A, u8> {
 	pub fn print_b(&self) {
 		self.print_mapped(|&v| if v > 9 { '+' } else { (v + b'0') as char });
 	}
@@ -316,7 +331,7 @@ impl Grid<u8> {
 	}
 }
 
-impl <T> Grid<T>
+impl<A: Deref<Target = [T]>, T> Grid<A, T>
 	where T: std::cmp::PartialEq {
 	pub fn find(&self, needle: &T) -> Option<(usize, usize)> {
 		self.iter()
@@ -325,13 +340,13 @@ impl <T> Grid<T>
 	}
 }
 
-pub struct GridIter<'a, T> {
-	g: &'a Grid<T>,
+pub struct GridIter<'a, A: Deref<Target = [T]>, T> {
+	g: &'a Grid<A, T>,
 	x: usize,
 	y: usize,
 }
 
-impl<'a, T> Iterator for GridIter<'a, T> {
+impl<'a, A: Deref<Target = [T]>, T> Iterator for GridIter<'a, A, T> {
 	type Item = (usize, usize, &'a T);
 
 	fn next(&mut self) -> Option<(usize, usize, &'a T)> {
@@ -348,15 +363,15 @@ impl<'a, T> Iterator for GridIter<'a, T> {
 	}
 }
 
-pub struct GridRayIter<'a, T> {
-	g: &'a Grid<T>,
+pub struct GridRayIter<'a, A: Deref<Target = [T]>, T> {
+	g: &'a Grid<A, T>,
 	point: [usize; 2],
 	end: usize,
 	step: i8,
 	axis: u8,
 }
 
-impl<'a, T> Iterator for GridRayIter<'a, T> {
+impl<'a, A: Deref<Target = [T]>, T> Iterator for GridRayIter<'a, A, T> {
 	type Item = (usize, usize, &'a T);
 
 	fn next(&mut self) -> Option<Self::Item> {
