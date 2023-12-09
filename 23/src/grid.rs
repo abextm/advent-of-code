@@ -97,7 +97,7 @@ impl<A: DerefMut<Target = [T]>, T: Copy> Grid<A, T> {
 
 impl Grid<Vec<u8>, u8> {
 	pub fn from_number_grid(input: &str) -> Self {
-		Self::from_str_with_mapper(input, |x| *x - '0' as u8)
+		Self::from_str_with_mapper(input, |x| *x - b'0')
 	}
 }
 
@@ -106,13 +106,13 @@ impl<'a> Grid<&'a [u8], u8> {
 		let input = input.as_bytes();
 		let width = input
 			.iter()
-			.position(|&i| i == '\n' as u8)
+			.position(|&i| i == b'\n')
 			.unwrap_or(input.len());
 		let stride = width + 1;
 		Grid {
 			map: input,
 			offset: 0,
-			height: input.len() / stride,
+			height: (input.len() + 1) / stride,
 			width,
 			stride,
 		}
@@ -124,13 +124,13 @@ impl<T> Grid<Vec<T>, T> {
 		let input = input.as_bytes();
 		let width = input
 			.iter()
-			.position(|&i| i == '\n' as u8)
+			.position(|&i| i == b'\n')
 			.unwrap_or(input.len());
 		// +1 for newlines
 		let height = (input.len() + 1) / (width + 1);
 		let map: Vec<T> = input
 			.into_iter()
-			.filter(|&i| *i != '\n' as u8)
+			.filter(|&i| *i != b'\n')
 			.map(f)
 			.collect();
 		let size = height * width;
@@ -216,7 +216,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 
 	// may be faster when finding a small number of elements than .iter().filter
 	pub fn filter_enumerate<'a, P: FnMut(&T) -> bool>(&'a self, mut predicate: P) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
-		self.map[self.offset..self.offset + (self.stride * self.height)].iter()
+		self.map[self.offset..self.offset + (self.stride * self.height) - self.stride + self.width].iter()
 			.enumerate()
 			.filter(move |(_, v)| predicate(v))
 			.map(|(i, v)| (i % self.stride, i / self.stride, v))
@@ -302,14 +302,14 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T>
 	where [T]: std::fmt::Debug {
 	pub fn print(&self) {
 		for y in 0..self.height {
-			let start = y * self.width;
+			let start = self.offset + y * self.stride;
 			println!("{:?}", &self.map[start..start + self.width]);
 		}
 	}
 
 	pub fn print_mapped<F: Fn(&T) -> char>(&self, convert: F) {
 		for y in 0..self.height {
-			let start = y * self.width;
+			let start = self.offset + y * self.stride;
 			for c in &self.map[start..start + self.width] {
 				print!("{}", convert(c));
 			}
