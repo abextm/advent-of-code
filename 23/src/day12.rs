@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use crate::grid::Grid;
 
 const OPERATIONAL: u8 = b'.';
 const DAMAGED: u8 = b'#';
@@ -9,9 +9,10 @@ struct Range {
 	value: u8,
 	min: usize,
 	rem_after: usize,
+	index: usize,
 }
 
-fn test(cache: &mut HashMap<(usize, usize), usize>, map: &[u8], ranges: &[Range]) -> usize {
+fn test(cache: &mut Grid<Vec<usize>, usize>, map: &[u8], ranges: &[Range]) -> usize {
 	let r = ranges[0];
 	if r.value == DAMAGED {
 		if !map[0..(r.min)].iter().all(|&v| v == UNKNOWN || v == DAMAGED) {
@@ -27,8 +28,9 @@ fn test(cache: &mut HashMap<(usize, usize), usize>, map: &[u8], ranges: &[Range]
 		return map.iter().all(|&v| v == UNKNOWN || v == OPERATIONAL) as usize;
 	}
 
-	if let Some(&v) = cache.get(&(map.len(), ranges.len())) {
-		return v
+	let v = cache[[map.len(), r.index]];
+	if v > 0 {
+		return v - 1;
 	}
 
 	let mut total_count = 0;
@@ -39,9 +41,33 @@ fn test(cache: &mut HashMap<(usize, usize), usize>, map: &[u8], ranges: &[Range]
 		}
 	}
 
-	cache.insert((map.len(), ranges.len()), total_count);
+	cache[[map.len(), r.index]] = total_count + 1;
 
 	total_count
+}
+
+fn solve(map: &[u8], segments: &[usize]) -> usize {
+	let mut ranges = Vec::new();
+	ranges.push(Range{value: OPERATIONAL, min: 0, rem_after: 0, index: 0});
+	segments.iter()
+		.map(|&v| Range{value: DAMAGED, min: v, rem_after: 0, index: 0})
+		.intersperse_with(|| Range{value: OPERATIONAL, min: 1, rem_after: 0, index: 0})
+		.for_each(|x| ranges.push(x));
+	ranges.push(Range{value: OPERATIONAL, min: 0, rem_after: 0, index: 0});
+
+	let mut used = 0;
+	let mut index = 0;
+	ranges.iter_mut().rev()
+		.for_each(|v| {
+			v.rem_after = used;
+			used += v.min;
+			if v.value == OPERATIONAL {
+				v.index = index;
+				index += 1;
+			}
+		});
+
+	test(&mut Grid::blank(&(map.len() + 1, index), 0usize), map, &ranges)
 }
 
 #[aoc(day12, part1)]
@@ -52,24 +78,8 @@ fn part1(input: &str) -> usize {
 			let segments = segments.split(",")
 				.map(|x| x.parse::<usize>().unwrap())
 				.collect::<Vec<_>>();
-			let map = map.as_bytes();
-
-			let mut ranges = Vec::new();
-			ranges.push(Range{value: OPERATIONAL, min: 0, rem_after: 0});
-			segments.iter()
-				.map(|&v| Range{value: DAMAGED, min: v, rem_after: 0})
-				.intersperse_with(|| Range{value: OPERATIONAL, min: 1, rem_after: 0})
-				.for_each(|x| ranges.push(x));
-			ranges.push(Range{value: OPERATIONAL, min: 0, rem_after: 0});
-
-			let mut used = 0;
-			ranges.iter_mut().rev()
-				.for_each(|v| {
-					v.rem_after = used;
-					used += v.min;
-				});
-
-			test(&mut HashMap::new(), map, &ranges)
+			
+			solve(map.as_bytes(), &segments)
 		})
 		.sum()
 }
@@ -85,27 +95,8 @@ fn part2(input: &str) -> usize {
 				.repeat(5);
 
 			let map = vec![in_map; 5].join("?");
-			let map = map.as_bytes();
-
-			let mut ranges = Vec::new();
-			ranges.push(Range{value: OPERATIONAL, min: 0, rem_after: 0});
-			segments.iter()
-				.map(|&v| Range{value: DAMAGED, min: v, rem_after: 0})
-				.intersperse_with(|| Range{value: OPERATIONAL, min: 1, rem_after: 0})
-				.for_each(|x| ranges.push(x));
-			ranges.push(Range{value: OPERATIONAL, min: 0, rem_after: 0});
-
-			let mut used = 0;
-			ranges.iter_mut().rev()
-				.for_each(|v| {
-					v.rem_after = used;
-					used += v.min;
-				});
-
-			let v = test(&mut HashMap::new(), &map, &ranges);
-
-			println!("{}", v);
-			v
+			
+			solve(map.as_bytes(), &segments)
 		})
 		.sum()
 }
