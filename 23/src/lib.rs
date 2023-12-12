@@ -1,4 +1,6 @@
 #![feature(iter_array_chunks)]
+#![feature(iter_next_chunk)]
+#![feature(iter_intersperse)]
 #![allow(dead_code)]
 
 #[macro_use] extern crate aoc_runner_derive;
@@ -17,5 +19,6 @@ pub mod day8;
 pub mod day9;
 pub mod day10;
 pub mod day11;
+pub mod day12;
 
 aoc_lib! {year=2023}
