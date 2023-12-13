@@ -104,6 +104,9 @@ impl<A: DerefMut<Target = [T]>, T: Copy> Grid<A> {
 	}
 }
 
+impl<A: Copy + GridBacking> Copy for Grid<A> {
+}
+
 impl Grid<Vec<u8>> {
 	pub fn from_number_grid(input: &str) -> Self {
 		Self::from_str_with_mapper(input, |x| *x - b'0')

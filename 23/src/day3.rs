@@ -1,7 +1,6 @@
 #[aoc(day3, part1)]
 fn part1(input: &str) -> usize {
 	let g = crate::grid::Grid::from_char_grid(input);
-	let g = &g;
 
 	let digits = b'0'..=b'9';
 	let digits = &digits;
@@ -28,7 +27,6 @@ fn part1(input: &str) -> usize {
 #[aoc(day3, part2)]
 fn part2(input: &str) -> usize {
 	let g = crate::grid::Grid::from_char_grid(input);
-	let g = &g;
 
 	let digits = b'0'..=b'9';
 	let digits = &digits;
