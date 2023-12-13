@@ -1,6 +1,6 @@
 use crate::grid::Grid;
 
-fn find_mirror(g: &Grid<&[u8], u8>, fail_want: usize) -> Option<usize> {
+fn find_mirror(g: &Grid<&[u8]>, fail_want: usize) -> Option<usize> {
 	(1..g.width()).filter(|x| {
 		let l_x = x - 1;
 		let r_x = x;

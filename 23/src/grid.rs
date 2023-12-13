@@ -1,8 +1,16 @@
 use std::usize;
 use std::ops::{Deref, DerefMut};
 
+pub trait GridBacking {
+	type Item;
+}
+
+impl<A: Deref<Target = [T]>, T> GridBacking for A {
+	type Item = T;
+}
+
 #[derive(Clone)]
-pub struct Grid<A: Deref<Target = [T]>, T> {
+pub struct Grid<A: GridBacking> {
 	map: A,
 	offset: usize,
 	stride: usize,
@@ -82,7 +90,7 @@ fn adjacent_n_points<S: Size>(adj: &'static [(isize, isize)], s: &S, x: usize, y
 }
 
 
-impl<T: Copy> Grid<Vec<T>, T> {
+impl<T: Copy> Grid<Vec<T>> {
 	pub fn blank<S: Size>(size: &S, v: T) -> Self {
 		let (width, height) = size.tuple();
 		let map = vec![v; width * height];
@@ -90,19 +98,19 @@ impl<T: Copy> Grid<Vec<T>, T> {
 	}
 }
 
-impl<A: DerefMut<Target = [T]>, T: Copy> Grid<A, T> {
+impl<A: DerefMut<Target = [T]>, T: Copy> Grid<A> {
 	pub fn fill(&mut self, v: T) {
 		self.map.fill(v);
 	}
 }
 
-impl Grid<Vec<u8>, u8> {
+impl Grid<Vec<u8>> {
 	pub fn from_number_grid(input: &str) -> Self {
 		Self::from_str_with_mapper(input, |x| *x - b'0')
 	}
 }
 
-impl<'a> Grid<&'a [u8], u8> {
+impl<'a> Grid<&'a [u8]> {
 	pub fn from_char_grid(input: &'a str) -> Self {
 		let input = input.as_bytes();
 		let width = input
@@ -121,7 +129,7 @@ impl<'a> Grid<&'a [u8], u8> {
 	}
 }
 
-impl<T> Grid<Vec<T>, T> {
+impl<T> Grid<Vec<T>> {
 	pub fn from_str_with_mapper<F: FnMut(&u8) -> T>(input: &str, f: F) -> Self {
 		let input = input.as_bytes();
 		let width = input
@@ -156,12 +164,12 @@ impl<T> Grid<Vec<T>, T> {
 		}
 	}
 
-	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<Vec<M>, M> {
+	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<Vec<M>> {
 		Grid::from_generator(self, move |x, y| f(x, y, &self[[x, y]]))
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> Grid<A, T> {
+impl<'a, A: Deref<Target = [T]>, T: 'a> Grid<A> {
 	#[inline]
 	fn index(&self, x: usize, y: usize) -> usize {
 		self.offset + x * self.h_stride + y * self.stride
@@ -178,7 +186,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 		}
 	}
 
-	pub fn as_ref(&self) -> Grid<&[T], T> {
+	pub fn as_ref(&self) -> Grid<&[T]> {
 		Grid {
 			map: &self.map,
 			offset: self.offset,
@@ -201,7 +209,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 		}
 	}
 
-	pub fn adjacent8<'a>(
+	pub fn adjacent8(
 		&'a self,
 		x: usize,
 		y: usize,
@@ -210,7 +218,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 			.map(move |p| (p.0, p.1, &self[p]))
 	}
 
-	pub fn adjacent4<'a>(
+	pub fn adjacent4(
 		&'a self,
 		x: usize,
 		y: usize,
@@ -219,7 +227,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 			.map(move |p| (p.0, p.1, &self[p]))
 	}
 
-	pub fn line_of_sight8<'a>(
+	pub fn line_of_sight8(
 		&'a self,
 		x: usize,
 		y: usize,
@@ -240,7 +248,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 	}
 
 	// may be faster when finding a small number of elements than .iter().filter
-	pub fn filter_enumerate<'a, P: FnMut(&T) -> bool>(&'a self, mut predicate: P) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
+	pub fn filter_enumerate<P: FnMut(&T) -> bool>(&'a self, mut predicate: P) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
 		let stride = self.stride.max(self.h_stride);
 		let swap = self.h_stride > self.stride;
 		self.map[self.index(0, 0)..=self.index(self.width() - 1, self.height() - 1)].iter()
@@ -260,7 +268,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 		&self.map[self.index(x.rem_euclid(self.width as isize) as usize, y.rem_euclid(self.height as isize) as usize)]
 	}
 
-	pub fn iter<'a>(&'a self) -> GridIter<'a, A, T> {
+	pub fn iter(&'a self) -> GridIter<'a, A, T> {
 		GridIter {
 			g: self,
 			x: 0,
@@ -276,7 +284,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 		self.height
 	}
 
-	pub fn directions_from<'a>(&'a self, x: usize, y: usize) -> impl Iterator<Item = impl Iterator<Item = (usize, usize, &'a T)>> {
+	pub fn directions_from(&'a self, x: usize, y: usize) -> impl Iterator<Item = impl Iterator<Item = (usize, usize, &'a T)>> {
 		let point = [x, y];
 		[
 			GridRayIter{g: self, point, end: 0, step: -1, axis: 0},
@@ -287,7 +295,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 	}
 }
 
-impl<A: DerefMut<Target=[T]>, T> Grid<A, T> {
+impl<A: DerefMut<Target=[T]>, T> Grid<A> {
 	pub fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut T {
 		let index = self.index(x, y);
 		&mut self.map[index]
@@ -298,7 +306,7 @@ impl<A: DerefMut<Target=[T]>, T> Grid<A, T> {
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> Size for Grid<A, T> {
+impl<A: Deref<Target = [T]>, T> Size for Grid<A> {
 	fn width(&self) -> usize {
 		self.width
 	}
@@ -308,30 +316,30 @@ impl<A: Deref<Target = [T]>, T> Size for Grid<A, T> {
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> std::ops::Index<(usize, usize)> for Grid<A, T> {
+impl<A: Deref<Target = [T]>, T> std::ops::Index<(usize, usize)> for Grid<A> {
 	type Output = T;
 	fn index(&self, index: (usize, usize)) -> &Self::Output {
 		self.get_unchecked(index.0, index.1)
 	}
 }
-impl<A: Deref<Target = [T]>, T> std::ops::Index<[usize; 2]> for Grid<A, T> {
+impl<A: Deref<Target = [T]>, T> std::ops::Index<[usize; 2]> for Grid<A> {
 	type Output = T;
 	fn index(&self, index: [usize; 2]) -> &Self::Output {
 		self.get_unchecked(index[0], index[1])
 	}
 }
-impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A, T> {
+impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A> {
 	fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
 		self.get_unchecked_mut(index.0, index.1)
 	}
 }
-impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A, T> {
+impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A> {
 	fn index_mut(&mut self, index: [usize; 2]) -> &mut T {
 		self.get_unchecked_mut(index[0], index[1])
 	}
 }
 
-impl<A: Deref<Target = [T]>, T: std::fmt::Debug> Grid<A, T> {
+impl<A: Deref<Target = [T]>, T: std::fmt::Debug> Grid<A> {
 	pub fn print(&self) {
 		for y in 0..self.height {
 			for x in 0..self.width {
@@ -342,7 +350,7 @@ impl<A: Deref<Target = [T]>, T: std::fmt::Debug> Grid<A, T> {
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> Grid<A, T> {
+impl<A: Deref<Target = [T]>, T> Grid<A> {
 	pub fn print_mapped<F: Fn(&T) -> char>(&self, convert: F) {
 		for y in 0..self.height {
 			for x in 0..self.width {
@@ -352,12 +360,12 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 		}
 	}
 }
-impl<A: Deref<Target = [bool]>> Grid<A, bool> {
-	pub fn print_b(&self) {
+impl<A: Deref<Target = [bool]>> Grid<A> {
+	pub fn print_bool(&self) {
 		self.print_mapped(|&c| if c {'#'} else {'.'});
 	}
 }
-impl<A: Deref<Target = [u8]>> Grid<A, u8> {
+impl<A: Deref<Target = [u8]>> Grid<A> {
 	pub fn print_b(&self) {
 		self.print_mapped(|&v| if v > 9 { '+' } else { (v + b'0') as char });
 	}
@@ -366,7 +374,7 @@ impl<A: Deref<Target = [u8]>> Grid<A, u8> {
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> Grid<A, T>
+impl<A: Deref<Target = [T]>, T> Grid<A>
 	where T: std::cmp::PartialEq {
 	pub fn find(&self, needle: &T) -> Option<(usize, usize)> {
 		self.iter()
@@ -376,12 +384,12 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T>
 }
 
 pub struct GridIter<'a, A: Deref<Target = [T]>, T> {
-	g: &'a Grid<A, T>,
+	g: &'a Grid<A>,
 	x: usize,
 	y: usize,
 }
 
-impl<'a, A: Deref<Target = [T]>, T> Iterator for GridIter<'a, A, T> {
+impl<'a, A: Deref<Target = [T]>, T: 'a> Iterator for GridIter<'a, A, T> {
 	type Item = (usize, usize, &'a T);
 
 	fn next(&mut self) -> Option<(usize, usize, &'a T)> {
@@ -399,14 +407,14 @@ impl<'a, A: Deref<Target = [T]>, T> Iterator for GridIter<'a, A, T> {
 }
 
 pub struct GridRayIter<'a, A: Deref<Target = [T]>, T> {
-	g: &'a Grid<A, T>,
+	g: &'a Grid<A>,
 	point: [usize; 2],
 	end: usize,
 	step: i8,
 	axis: u8,
 }
 
-impl<'a, A: Deref<Target = [T]>, T> Iterator for GridRayIter<'a, A, T> {
+impl<'a, A: Deref<Target = [T]>, T: 'a> Iterator for GridRayIter<'a, A, T> {
 	type Item = (usize, usize, &'a T);
 
 	fn next(&mut self) -> Option<Self::Item> {

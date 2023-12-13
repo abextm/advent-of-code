@@ -12,7 +12,7 @@ struct Range {
 	index: usize,
 }
 
-fn test(cache: &mut Grid<Vec<usize>, usize>, map: &[u8], ranges: &[Range]) -> usize {
+fn test(cache: &mut Grid<Vec<usize>>, map: &[u8], ranges: &[Range]) -> usize {
 	let r = ranges[0];
 	if r.value == DAMAGED {
 		if !map[0..(r.min)].iter().all(|&v| v == UNKNOWN || v == DAMAGED) {
