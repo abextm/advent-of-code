@@ -46,6 +46,7 @@ version = "0.1.0"
 dependencies = [
  "aoc-runner",
  "aoc-runner-derive",
+ "memchr",
  "num",
  "regex",
 ]

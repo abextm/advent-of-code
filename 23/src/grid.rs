@@ -1,5 +1,6 @@
 use std::usize;
 use std::ops::{Deref, DerefMut};
+use memchr;
 
 pub trait GridBacking {
 	type Item;
@@ -116,9 +117,7 @@ impl Grid<Vec<u8>> {
 impl<'a> Grid<&'a [u8]> {
 	pub fn from_char_grid(input: &'a str) -> Self {
 		let input = input.as_bytes();
-		let width = input
-			.iter()
-			.position(|&i| i == b'\n')
+		let width = memchr::memchr(b'\n', input)
 			.unwrap_or(input.len());
 		let stride = width + 1;
 		Grid {
@@ -130,14 +129,16 @@ impl<'a> Grid<&'a [u8]> {
 			stride,
 		}
 	}
+
+	pub fn from_char_grid_list(input: &'a str) -> GridListIter<'a> {
+		GridListIter { s: input.as_bytes() }
+	}
 }
 
 impl<T> Grid<Vec<T>> {
 	pub fn from_str_with_mapper<F: FnMut(&u8) -> T>(input: &str, f: F) -> Self {
 		let input = input.as_bytes();
-		let width = input
-			.iter()
-			.position(|&i| i == b'\n')
+		let width = memchr::memchr(b'\n', input)
 			.unwrap_or(input.len());
 		// +1 for newlines
 		let height = (input.len() + 1) / (width + 1);
@@ -428,5 +429,44 @@ impl<'a, A: Deref<Target = [T]>, T: 'a> Iterator for GridRayIter<'a, A, T> {
 		*c = c.wrapping_add_signed(self.step as isize);
 
 		Some((self.point[0], self.point[1], &self.g[self.point]))
+	}
+}
+
+pub struct GridListIter<'a> {
+	s: &'a [u8],
+}
+
+impl<'a> Iterator for GridListIter<'a> {
+	type Item = Grid<&'a [u8]>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.s.len() < 2 {
+			return None
+		}
+
+		let width = memchr::memchr(b'\n', self.s)
+			.unwrap_or(self.s.len());
+
+		let stride = width + 1;
+		let mut off = width + 1;
+
+		loop {
+			off += stride;
+			if off >= self.s.len() || self.s[off] == b'\n' {
+				break;
+			}
+		}
+
+		let chunk = &self.s[..(self.s.len().min(off - 1))];
+		self.s = &self.s[(self.s.len().min(off + 1))..];
+
+		Some(Grid {
+			map: chunk,
+			offset: 0,
+			height: (chunk.len() + 1) / stride,
+			h_stride: 1,
+			width,
+			stride,
+		})
 	}
 }

@@ -32,15 +32,15 @@ fn part2(input: &str) -> usize {
 }
 
 fn solve(input: &str, fail_want: usize) -> usize {
-	input.split("\n\n").map(|grid| {
-		let grid = Grid::from_char_grid(grid);
+	Grid::from_char_grid_list(input)
+		.map(|grid| {
 		if let Some(v) = find_mirror(&grid, fail_want) {
 			v
 		} else if let Some(v) = find_mirror(&grid.as_ref().transposed(), fail_want) {
 			v * 100
 		} else {
 			grid.print_c();
-			panic!("");
+			panic!("{} {}", grid.width(), grid.height());
 		}
 	}).sum()
 }
