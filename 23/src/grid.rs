@@ -6,6 +6,7 @@ pub struct Grid<A: Deref<Target = [T]>, T> {
 	map: A,
 	offset: usize,
 	stride: usize,
+	h_stride: usize,
 	width: usize,
 	height: usize,
 }
@@ -85,7 +86,7 @@ impl<T: Copy> Grid<Vec<T>, T> {
 	pub fn blank<S: Size>(size: &S, v: T) -> Self {
 		let (width, height) = size.tuple();
 		let map = vec![v; width * height];
-		Grid { map, width, height, offset: 0, stride: width }
+		Grid { map, width, height, offset: 0, stride: width, h_stride: 1, }
 	}
 }
 
@@ -113,6 +114,7 @@ impl<'a> Grid<&'a [u8], u8> {
 			map: input,
 			offset: 0,
 			height: (input.len() + 1) / stride,
+			h_stride: 1,
 			width,
 			stride,
 		}
@@ -137,7 +139,7 @@ impl<T> Grid<Vec<T>, T> {
 		if map.len() != size {
 			panic!("bad input: {} != {}", map.len(), size);
 		}
-		Grid { map, width, height, offset: 0, stride: width }
+		Grid { map, width, height, offset: 0, stride: width, h_stride: 1 }
 	}
 
 	pub fn from_generator<S: Size, F: FnMut(usize, usize) -> T>(size: &S, mut f: F) -> Self {
@@ -149,6 +151,7 @@ impl<T> Grid<Vec<T>, T> {
 			width: size.width(),
 			stride: size.width(),
 			height: size.height(),
+			h_stride: 1,
 			offset: 0,
 		}
 	}
@@ -161,7 +164,29 @@ impl<T> Grid<Vec<T>, T> {
 impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 	#[inline]
 	fn index(&self, x: usize, y: usize) -> usize {
-		self.offset + x + y * self.stride
+		self.offset + x * self.h_stride + y * self.stride
+	}
+
+	pub fn reversed(self) -> Self {
+		Grid {
+			map: self.map,
+			offset: self.offset,
+			stride: self.h_stride,
+			h_stride: self.stride,
+			width: self.height,
+			height: self.width,
+		}
+	}
+
+	pub fn as_ref(&self) -> Grid<&[T], T> {
+		Grid {
+			map: &self.map,
+			offset: self.offset,
+			stride: self.stride,
+			h_stride: self.h_stride,
+			width: self.width,
+			height: self.height,
+		}
 	}
 
 	pub fn get_unchecked(&self, x: usize, y: usize) -> &T {
