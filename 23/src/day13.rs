@@ -36,7 +36,7 @@ fn solve(input: &str, fail_want: usize) -> usize {
 		let grid = Grid::from_char_grid(grid);
 		if let Some(v) = find_mirror(&grid, fail_want) {
 			v
-		} else if let Some(v) = find_mirror(&grid.as_ref().reversed(), fail_want) {
+		} else if let Some(v) = find_mirror(&grid.as_ref().transposed(), fail_want) {
 			v * 100
 		} else {
 			grid.print_c();

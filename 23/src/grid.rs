@@ -167,7 +167,7 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 		self.offset + x * self.h_stride + y * self.stride
 	}
 
-	pub fn reversed(self) -> Self {
+	pub fn transposed(self) -> Self {
 		Grid {
 			map: self.map,
 			offset: self.offset,
@@ -241,10 +241,18 @@ impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 
 	// may be faster when finding a small number of elements than .iter().filter
 	pub fn filter_enumerate<'a, P: FnMut(&T) -> bool>(&'a self, mut predicate: P) -> impl Iterator<Item = (usize, usize, &T)> + Captures<'a> {
-		self.map[self.offset..self.offset + (self.stride * self.height) - self.stride + self.width].iter()
+		let stride = self.stride.max(self.h_stride);
+		let swap = self.h_stride > self.stride;
+		self.map[self.index(0, 0)..=self.index(self.width() - 1, self.height() - 1)].iter()
 			.enumerate()
 			.filter(move |(_, v)| predicate(v))
-			.map(|(i, v)| (i % self.stride, i / self.stride, v))
+			.map(move |(i, v)| {
+				let mut  coord = (i % stride, i / stride);
+				if swap {
+					coord = (coord.1, coord.0);
+				}
+				(coord.0, coord.1, v)
+			})
 			.filter(|&(x, _y, _v)| x < self.width)
 	}
 
@@ -323,20 +331,22 @@ impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A, T>
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> Grid<A, T>
-	where [T]: std::fmt::Debug {
+impl<A: Deref<Target = [T]>, T: std::fmt::Debug> Grid<A, T> {
 	pub fn print(&self) {
 		for y in 0..self.height {
-			let start = self.offset + y * self.stride;
-			println!("{:?}", &self.map[start..start + self.width]);
+			for x in 0..self.width {
+				print!("{:?}", &self[[x, y]]);
+			}
+			println!("");
 		}
 	}
+}
 
+impl<A: Deref<Target = [T]>, T> Grid<A, T> {
 	pub fn print_mapped<F: Fn(&T) -> char>(&self, convert: F) {
 		for y in 0..self.height {
-			let start = self.offset + y * self.stride;
-			for c in &self.map[start..start + self.width] {
-				print!("{}", convert(c));
+			for x in 0..self.width {
+				print!("{}", convert(&self[[x, y]]));
 			}
 			println!("");
 		}
