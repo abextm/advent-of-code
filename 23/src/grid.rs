@@ -1,3 +1,4 @@
+use std::hash::Hasher;
 use std::usize;
 use std::ops::{Deref, DerefMut};
 use memchr;
@@ -132,6 +133,19 @@ impl<'a> Grid<&'a [u8]> {
 
 	pub fn from_char_grid_list(input: &'a str) -> GridListIter<'a> {
 		GridListIter { s: input.as_bytes() }
+	}
+}
+
+impl<A: Deref<Target = [T]>, T: Clone> Grid<A> {
+	pub fn owned_copy(&self) -> Grid<Vec<T>> {
+		Grid {
+			map: self.map.to_vec(),
+			offset: self.offset,
+			stride: self.stride,
+			h_stride: self.h_stride,
+			width: self.width,
+			height: self.height,
+		}
 	}
 }
 
@@ -308,6 +322,17 @@ impl<A: DerefMut<Target=[T]>, T> Grid<A> {
 		let index = self.index(x.rem_euclid(self.width as isize) as usize, y.rem_euclid(self.height as isize) as usize);
 		&mut self.map[index]
 	}
+
+	pub fn as_mut_ref(&mut self) -> Grid<&mut [T]> {
+		Grid {
+			map: &mut self.map,
+			offset: self.offset,
+			stride: self.stride,
+			h_stride: self.h_stride,
+			width: self.width,
+			height: self.height,
+		}
+	}
 }
 
 impl<A: Deref<Target = [T]>, T> Size for Grid<A> {
@@ -468,5 +493,24 @@ impl<'a> Iterator for GridListIter<'a> {
 			width,
 			stride,
 		})
+	}
+}
+
+impl<A: Deref<Target=[T]>, A2: Deref<Target=[T2]>, T: PartialEq<T2>, T2> PartialEq<Grid<A2>> for Grid<A> {
+	fn eq(&self, other: &Grid<A2>) -> bool {
+		if self.width() != other.width() || self.height() != other.height() {
+			return false;
+		}
+
+		return self.iter().all(|(x, y, v)| *v == other[[x, y]])
+	}
+}
+
+impl<A: Deref<Target=[T]>, T: Eq> Eq for Grid<A> {
+}
+
+impl<A: Deref<Target=[T]>, T: std::hash::Hash> std::hash::Hash for Grid<A> {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		self.iter().for_each(|(_x, _y, v)| v.hash(state));
 	}
 }
