@@ -357,6 +357,12 @@ impl<A: Deref<Target = [T]>, T> std::ops::Index<[usize; 2]> for Grid<A> {
 		self.get_unchecked(index[0], index[1])
 	}
 }
+impl<A: Deref<Target = [T]>, T> std::ops::Index<[isize; 2]> for Grid<A> {
+	type Output = T;
+	fn index(&self, index: [isize; 2]) -> &Self::Output {
+		self.get_unchecked(index[0] as usize, index[1] as usize)
+	}
+}
 impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A> {
 	fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
 		self.get_unchecked_mut(index.0, index.1)
@@ -365,6 +371,11 @@ impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A
 impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A> {
 	fn index_mut(&mut self, index: [usize; 2]) -> &mut T {
 		self.get_unchecked_mut(index[0], index[1])
+	}
+}
+impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[isize; 2]> for Grid<A> {
+	fn index_mut(&mut self, index: [isize; 2]) -> &mut T {
+		self.get_unchecked_mut(index[0] as usize, index[1] as usize)
 	}
 }
 
@@ -514,3 +525,22 @@ impl<A: Deref<Target=[T]>, T: std::hash::Hash> std::hash::Hash for Grid<A> {
 		self.iter().for_each(|(_x, _y, v)| v.hash(state));
 	}
 }
+
+/**
+ * incorrect for unequally transposed or strided grids
+ */
+#[derive(Eq, PartialEq)]
+pub struct FastHash<const ROWS: usize, T: Clone + std::hash::Hash>(pub Grid<Vec<T>>);
+
+impl<const ROWS: usize, T: Clone + std::hash::Hash> std::hash::Hash for FastHash<ROWS, T> {
+	fn hash<H: Hasher>(&self, state: &mut H) {
+		let g = &self.0;
+		if g.height < ROWS * 2 {
+			T::hash_slice(&g.map[g.index(0, 0)..=g.index(g.width() - 1, g.height() - 1)], state)
+		} else {
+			T::hash_slice(&g.map[g.index(0, 0)..=g.index(g.width() - 1, ROWS)], state);
+			T::hash_slice(&g.map[g.index(0, g.height() - 1 - ROWS)..=g.index(g.width() - 1, g.height() - 1)], state);
+		}
+	}
+}
+

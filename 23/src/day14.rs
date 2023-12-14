@@ -2,43 +2,31 @@ use crate::grid::Grid;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-fn cycle_n(grid: &mut Grid<&mut [u8]>) {
-	for y in 1..grid.height() {
-		for x in 0..grid.width() {
-			if grid[[x, y]] == b'O' {
-				let mut y2 = y as isize;
-				loop {
-					y2 -= 1;
-					if y2 < 0 || grid[[x, y2 as usize]] != b'.' {
-						break;
-					}
-				}
-				let y2 = (y2 + 1) as usize;
-				if y2 != y {
-					grid[[x, y]] = b'.';
-					grid[[x, y2]] = b'O';
-				}
+fn shift<const DIR: isize>(grid: &mut Grid<&mut [u8]>) {
+	let (start, end) = if DIR == -1 {
+		(grid.height() as isize - 1, 0)
+	} else {
+		(0, grid.height() as isize - 1)
+	};
+	for x in 0..grid.width() as isize {
+		let mut y_blank = start;
+		let mut y_search = start;
+		loop {
+			match grid[[x, y_search]] {
+				b'O' => {
+					grid[[x, y_search]] = b'.';
+					grid[[x, y_blank]] = b'O';
+					y_blank += DIR;
+				},
+				b'#' => {
+					y_blank = y_search + DIR;
+				},
+				_ => {},
 			}
-		}
-	}
-}
-fn cycle_s(grid: &mut Grid<&mut [u8]>) {
-	for y in (0..(grid.height() - 1)).rev() {
-		for x in 0..grid.width() {
-			if grid[[x, y]] == b'O' {
-				let mut y2 = y;
-				loop {
-					y2 += 1;
-					if y2 >= grid.height() || grid[[x, y2 as usize]] != b'.' {
-						break;
-					}
-				}
-				let y2 = y2 - 1;
-				if y2 != y {
-					grid[[x, y]] = b'.';
-					grid[[x, y2]] = b'O';
-				}
+			if y_search == end {
+				break;
 			}
+			y_search += DIR;
 		}
 	}
 }
@@ -47,7 +35,7 @@ fn cycle_s(grid: &mut Grid<&mut [u8]>) {
 fn part1(input: &str) -> usize {
 	let mut grid = Grid::from_char_grid(input).owned_copy();
 
-	cycle_n(&mut grid.as_mut_ref());
+	shift::<1>(&mut grid.as_mut_ref());
 
 	grid.filter_enumerate(|&x| x == b'O')
 		.map(|(_x, y, _v)| grid.height() - y)
@@ -58,19 +46,19 @@ fn part1(input: &str) -> usize {
 fn part2(input: &str) -> usize {
 	let mut grid = Grid::from_char_grid(input).owned_copy();
 
-	let mut history = HashMap::<Grid<Vec<u8>>, usize>::new();
+	let mut history = HashMap::<crate::grid::FastHash<1, u8>, usize>::new();
 
 	let target_cycles = 1_000_000_000;
 	let mut cycle = 0;
 
 	while cycle < target_cycles {
-		cycle_n(&mut grid.as_mut_ref());
-		cycle_n(&mut grid.as_mut_ref().transposed());
-		cycle_s(&mut grid.as_mut_ref());
-		cycle_s(&mut grid.as_mut_ref().transposed());
+		shift::<1>(&mut grid.as_mut_ref());
+		shift::<1>(&mut grid.as_mut_ref().transposed());
+		shift::<-1>(&mut grid.as_mut_ref());
+		shift::<-1>(&mut grid.as_mut_ref().transposed());
 
 		cycle += 1;
-		match history.entry(grid.clone()) {
+		match history.entry(crate::grid::FastHash(grid.clone())) {
 			Entry::Occupied(v) => {
 				let last_cycle = v.get();
 				let delta = cycle - last_cycle;
