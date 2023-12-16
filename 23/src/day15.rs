@@ -1,3 +1,4 @@
+use std::collections::hash_map;
 fn hash(str: &str) -> u8 {
 	str.as_bytes().iter().fold(0, |acc, v| v.wrapping_add(acc).wrapping_mul(17))
 }
@@ -13,36 +14,47 @@ fn part1(input: &str) -> usize {
 fn part2(input: &str) -> usize {
 	let pat = regex::Regex::new("(.*)(-|=([0-9]))").unwrap();
 
-	let mut boxes = vec![Vec::<(&str, u8)>::new(); 256];
-	input.trim().split(",")
-		.for_each(|str| {
+	let mut map = hash_map::HashMap::<&str, (u8, usize)>::new();
+	let mut it = input.trim().split(",")
+		.map(|str| {
 			let cap = pat.captures(str).unwrap();
 			let label = &str[cap.get(1).unwrap().range()];
-			let box_index = hash(label) as usize;
-			let box0 = &mut boxes[box_index];
-			match cap.get(3) {
-				None => {
-					box0.retain(|&(e_label, _)| e_label != label)
-				},
-				Some(focal_len) => {
-					let focal_len = focal_len.as_str().parse().unwrap();
-					match box0.iter_mut().find(|(e_label, _)| *e_label == label) {
-						Some(b) => { b.1 = focal_len; },
-						None => {
-							box0.push((label, focal_len));
-						}
-					}
-				},
-			};
+			let focal_len = cap.get(3).map(|s| s.as_str().parse::<u8>().unwrap());
+			(label, focal_len)
 		});
 
-	boxes.iter()
-		.enumerate()
-		.flat_map(|(boxi, box0)| box0.iter()
-			.enumerate()
-			.map(move |(i, &(_, len))| {
-				let v = (boxi + 1) as usize * (i + 1) * len as usize;
-				v
-			}))
-			.sum::<usize>()
+	let mut order = Vec::<Option<&str>>::new();
+	loop {
+		match it.next() {
+			Some((label, Some(len))) => {
+				match map.entry(label) {
+					hash_map::Entry::Occupied(mut v) => v.get_mut().0 = len,
+					hash_map::Entry::Vacant(v) => {
+						v.insert((len, order.len()));
+						order.push(Some(label));
+					},
+				}
+			},
+			Some((label, None)) => {
+				if let Some(ent) = map.remove(&label) {
+					order[ent.1] = None;
+				}
+			},
+			None => break,
+		}	
+	}
+
+	let mut lens = vec![0usize; 256];
+	let mut sum = 0;
+	for label in order {
+		if let Some(label) = label {
+			if let Some(&(focal_length, _)) = map.get(label) {
+				let hash = hash(label) as usize;
+				let index = lens[hash] + 1;
+				lens[hash] = index;
+				sum += focal_length as usize * (hash + 1) * index;
+			}
+		}
+	}
+	sum
 }
