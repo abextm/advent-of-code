@@ -181,16 +181,16 @@ impl<T> Grid<Vec<T>> {
 			offset: 0,
 		}
 	}
-
-	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<Vec<M>> {
-		Grid::from_generator(self, move |x, y| f(x, y, &self[[x, y]]))
-	}
 }
 
 impl<'a, A: Deref<Target = [T]>, T: 'a> Grid<A> {
 	#[inline]
 	fn index(&self, x: usize, y: usize) -> usize {
 		self.offset + x * self.h_stride + y * self.stride
+	}
+
+	pub fn map<F: FnMut(usize, usize, &T) -> M, M>(&self, mut f: F) -> Grid<Vec<M>> {
+		Grid::from_generator(self, move |x, y| f(x, y, &self[[x, y]]))
 	}
 
 	pub fn transposed(self) -> Self {
@@ -357,6 +357,12 @@ impl<A: Deref<Target = [T]>, T> std::ops::Index<[usize; 2]> for Grid<A> {
 		self.get_unchecked(index[0], index[1])
 	}
 }
+impl<A: Deref<Target = [T]>, T> std::ops::Index<(isize, isize)> for Grid<A> {
+	type Output = T;
+	fn index(&self, index: (isize, isize)) -> &Self::Output {
+		self.get_unchecked(index.0 as usize, index.1 as usize)
+	}
+}
 impl<A: Deref<Target = [T]>, T> std::ops::Index<[isize; 2]> for Grid<A> {
 	type Output = T;
 	fn index(&self, index: [isize; 2]) -> &Self::Output {
@@ -371,6 +377,11 @@ impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A
 impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A> {
 	fn index_mut(&mut self, index: [usize; 2]) -> &mut T {
 		self.get_unchecked_mut(index[0], index[1])
+	}
+}
+impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(isize, isize)> for Grid<A> {
+	fn index_mut(&mut self, index: (isize, isize)) -> &mut T {
+		self.get_unchecked_mut(index.0 as usize, index.1 as usize)
 	}
 }
 impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[isize; 2]> for Grid<A> {
