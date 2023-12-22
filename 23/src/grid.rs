@@ -345,48 +345,44 @@ impl<A: Deref<Target = [T]>, T> Size for Grid<A> {
 	}
 }
 
-impl<A: Deref<Target = [T]>, T> std::ops::Index<(usize, usize)> for Grid<A> {
+trait GridIndex {
+	fn index(self) -> (usize, usize);
+}
+impl<T: GridIndexInt> GridIndex for [T; 2] {
+	fn index(self) -> (usize, usize) {
+		(self[0].as_usize(), self[1].as_usize())
+	}
+}
+impl<T: GridIndexInt> GridIndex for (T, T) {
+	fn index(self) -> (usize, usize) {
+		(self.0.as_usize(), self.1.as_usize())
+	}
+}
+trait GridIndexInt: Copy {
+	fn as_usize(self) -> usize;
+}
+impl GridIndexInt for usize { fn as_usize(self) -> usize { self } }
+impl GridIndexInt for isize { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for i64 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for u64 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for i32 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for u32 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for i16 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for u16 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for i8 { fn as_usize(self) -> usize { self as usize } }
+impl GridIndexInt for u8 { fn as_usize(self) -> usize { self as usize } }
+
+impl<A: Deref<Target = [T]>, T, I: GridIndex> std::ops::Index<I> for Grid<A> {
 	type Output = T;
-	fn index(&self, index: (usize, usize)) -> &Self::Output {
+	fn index(&self, index: I) -> &Self::Output {
+		let index = index.index();
 		self.get_unchecked(index.0, index.1)
 	}
 }
-impl<A: Deref<Target = [T]>, T> std::ops::Index<[usize; 2]> for Grid<A> {
-	type Output = T;
-	fn index(&self, index: [usize; 2]) -> &Self::Output {
-		self.get_unchecked(index[0], index[1])
-	}
-}
-impl<A: Deref<Target = [T]>, T> std::ops::Index<(isize, isize)> for Grid<A> {
-	type Output = T;
-	fn index(&self, index: (isize, isize)) -> &Self::Output {
-		self.get_unchecked(index.0 as usize, index.1 as usize)
-	}
-}
-impl<A: Deref<Target = [T]>, T> std::ops::Index<[isize; 2]> for Grid<A> {
-	type Output = T;
-	fn index(&self, index: [isize; 2]) -> &Self::Output {
-		self.get_unchecked(index[0] as usize, index[1] as usize)
-	}
-}
-impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(usize, usize)> for Grid<A> {
-	fn index_mut(&mut self, index: (usize, usize)) -> &mut T {
+impl<A: DerefMut<Target = [T]>, T, I: GridIndex> std::ops::IndexMut<I> for Grid<A> {
+	fn index_mut(&mut self, index: I) -> &mut T {
+		let index = index.index();
 		self.get_unchecked_mut(index.0, index.1)
-	}
-}
-impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[usize; 2]> for Grid<A> {
-	fn index_mut(&mut self, index: [usize; 2]) -> &mut T {
-		self.get_unchecked_mut(index[0], index[1])
-	}
-}
-impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<(isize, isize)> for Grid<A> {
-	fn index_mut(&mut self, index: (isize, isize)) -> &mut T {
-		self.get_unchecked_mut(index.0 as usize, index.1 as usize)
-	}
-}
-impl<A: DerefMut<Target = [T]>, T> std::ops::IndexMut<[isize; 2]> for Grid<A> {
-	fn index_mut(&mut self, index: [isize; 2]) -> &mut T {
-		self.get_unchecked_mut(index[0] as usize, index[1] as usize)
 	}
 }
 
@@ -394,7 +390,7 @@ impl<A: Deref<Target = [T]>, T: std::fmt::Debug> Grid<A> {
 	pub fn print(&self) {
 		for y in 0..self.height {
 			for x in 0..self.width {
-				print!("{:?}", &self[[x, y]]);
+				print!("{:?}\t", &self[[x, y]]);
 			}
 			println!("");
 		}
