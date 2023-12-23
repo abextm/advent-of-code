@@ -129,5 +129,5 @@ fn test_p1() {
 
 #[test]
 fn test_p2() {
-	assert_eq!(70, part2(EXAMPLE));
+	assert_eq!(7, part2(EXAMPLE));
 }
