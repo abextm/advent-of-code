@@ -19,7 +19,7 @@ fn day5(input: &str, mod_id: i64) -> i64 {
 	let retval = vals.pop().unwrap();
 	for (id, val) in vals.into_iter().enumerate() {
 		match val {
-			Err(e) => panic!(e),
+			Err(e) => panic!("{:?}", e),
 			Ok(0) => (),
 			Ok(val) => println!("{} is {}", id, val),
 		}

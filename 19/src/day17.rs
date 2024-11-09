@@ -8,12 +8,6 @@ mod tile {
 	pub const SPACE: i64 = '.' as i64;
 }
 
-mod command {
-	pub const RIGHT: u8 = 'R' as u8;
-	pub const LEFT: u8 = 'L' as u8;
-	pub const FOREWARD: u8 = 'F' as u8;
-}
-
 const DIRS: [(isize, isize); 4] = [
 	(0, 1),
 	(1, 0),
@@ -23,7 +17,7 @@ const DIRS: [(isize, isize); 4] = [
 
 #[aoc(day17, part1)]
 fn day17_part1(input: &str) -> usize {
-	let mut state = vm::new_from_str(input).unwrap();
+	let state = vm::new_from_str(input).unwrap();
 	let map = state.map(|x| x.unwrap()).collect::<Vec<_>>();
 	let width = map
 		.iter()
@@ -98,13 +92,13 @@ fn day17_part2(input: &str) -> i64 {
 
 	'outer:
 		loop {
-			for &(newdir, cmd) in &[
-				(0, command::FOREWARD),
-				(3, command::LEFT),
-				(1, command::RIGHT)
+			for newdir in &[
+				0, // FOREWARD
+				3, // LEFT
+				1, // RIGHT
 			] {
 				let newdir = (dir + newdir) % 4;
-				let mut newcoord = add2(coord, DIRS[newdir]);
+				let newcoord = add2(coord, DIRS[newdir]);
 				if get_grid(&map, stride, newcoord) == Some(&tile::STRUCTURE) {
 					active.1 += 1;
 					if dir != newdir {
@@ -131,21 +125,7 @@ fn day17_part2(input: &str) -> i64 {
 			.insert(i);
 	}
 
-	fn solution(
-		uses: HashMap::<(usize, usize, usize), HashSet<usize>>,
-		path: Vec<(usize, usize, usize)>,
-		i: usize,
-	) -> Option<String> {
-		
-		None
-	}
-
-	print!("{:?}", solution(uses, path, 0));
-
 //	print!("{}", map.iter().map(|x| std::char::from_u32(*x as u32).unwrap()).collect::<String>());
-	
-
-	if true { return 0; }
 
 	state.memory[0] = 2;
 	for c in state

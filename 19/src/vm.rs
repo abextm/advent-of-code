@@ -111,7 +111,7 @@ impl<I: Iterator<Item = i64>> State<I> {
 	}
 
 	pub fn with_input_vec<'a>(self, input: &'static [i64]) -> State<impl Iterator<Item = i64>> {
-		self.with_input(input.clone().iter().cloned())
+		self.with_input(input.iter().cloned())
 	}
 
 	pub fn without_input(self) -> State<iter::Empty<i64>> {

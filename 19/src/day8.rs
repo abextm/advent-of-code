@@ -3,7 +3,7 @@ fn day8_part1(input: &str) -> usize {
 	checksum(decode(input, (25, 6)))
 }
 
-fn checksum(mut layers: Vec<Vec<u8>>) -> usize {
+fn checksum(layers: Vec<Vec<u8>>) -> usize {
 	layers
 		.iter()
 		.min_by_key(|x| x.iter().filter(|x| **x == 0).count())

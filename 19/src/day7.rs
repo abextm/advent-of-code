@@ -14,7 +14,7 @@ fn day7_part2(input: &str) -> i64 {
 fn day7(input: &str, part2: bool) -> i64 {
 	let template = vm::new_from_str(input).unwrap();
 
-	let stage_templates: Vec<_> = if !part2 { (0..5) } else { (5..10) }
+	let stage_templates: Vec<_> = if !part2 { 0..5 } else { 5..10 }
 		.map(|n| {
 			let mut vm = template.clone().with_input(n..=n);
 			match vm.run() {
