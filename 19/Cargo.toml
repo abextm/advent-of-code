@@ -5,8 +5,8 @@ authors = ["Max Weber <mii7303@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-aoc-runner = "0.2.2"
-aoc-runner-derive = "0.2.2"
+aoc-runner = "0.3.0"
+aoc-runner-derive = "0.3.0"
 
 strum = "0.16.0"
 strum_macros = "0.16.0"
