@@ -1,6 +1,8 @@
+#![feature(iter_array_chunks)]
 #[macro_use] extern crate aoc_runner_derive;
 extern crate aoc_runner;
 #[macro_use] extern crate lazy_static;
+extern crate core;
 
 pub mod vm;
 pub mod taken;
@@ -22,5 +24,7 @@ pub mod day13;
 pub mod day14;
 pub mod day15;
 pub mod day17;
+pub mod day18;
+mod grid;
 
 aoc_lib! {year=2019}

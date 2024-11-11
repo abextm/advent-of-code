@@ -2,7 +2,14 @@
 name = "aoc19"
 version = "0.1.0"
 authors = ["Max Weber <mii7303@gmail.com>"]
-edition = "2018"
+edition = "2021"
+
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+debug = true
+
 
 [dependencies]
 aoc-runner = "0.3.0"
@@ -16,3 +23,4 @@ lazy_static = "1.4.0"
 regex = "1"
 
 num = "0.2"
+memchr = "2.2.1"
