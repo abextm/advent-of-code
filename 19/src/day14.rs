@@ -1,20 +1,21 @@
 use crate::taken::TakeN;
 use std::collections::HashMap;
 
-#[aoc(day14, part1)]
+#[aoc(part1=532506)]
 fn day14_part1(input: &str) -> isize {
 	let mut keys = decode_recipes(input);
 	get(&mut keys, 1, "FUEL")
 }
 
-#[aoc(day14, part2)]
+#[aoc(part2=2595245)]
 fn day14_part2(input: &str) -> isize {
 	let mut keys = decode_recipes(input);
 	get_max(&mut keys, TRIL, "FUEL")
 }
 
-fn decode_recipes<'a>(input: &'a str) -> HashMap<&'a str, Recipe<'a>> {
+fn decode_recipes(input: &str) -> HashMap<&str, Recipe> {
 	input
+		.trim()
 		.split("\n")
 		.map(|l| {
 			let [input, output]: [_; 2] = l.split("=>").take_n().unwrap();

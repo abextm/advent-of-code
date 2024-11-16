@@ -3,7 +3,7 @@ use num;
 use regex::Regex;
 use std::fmt;
 
-#[aoc(day12, part1)]
+#[aoc(part1=10664)]
 fn day12_part1(input: &str) -> isize {
 	let mut system = System::new(input);
 	for _ in 0..1000 {
@@ -12,7 +12,7 @@ fn day12_part1(input: &str) -> isize {
 	system.energy()
 }
 
-#[aoc(day12, part2)]
+#[aoc(part2=303459551979256)]
 fn day12_part2(input: &str) -> isize {
 	let mut system = System::new(input);
 	let start = system.get_per_axis();

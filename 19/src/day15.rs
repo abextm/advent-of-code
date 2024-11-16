@@ -124,16 +124,7 @@ impl Explorer {
 	}
 }
 
-#[aoc(day15, part1)]
-fn day15_part1(input: &str) -> usize {
-	day15(input, false)
-}
-
-#[aoc(day15, part2)]
-fn day15_part2(input: &str) -> usize {
-	day15(input, true)
-}
-
+#[aoc(part1=262, part2=314)]
 fn day15(input: &str, part2: bool) -> usize {
 	let root = vm::new_from_str(input).unwrap();
 

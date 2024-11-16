@@ -1,17 +1,8 @@
 use crate::taken::TakeN;
 
-#[aoc(day4, part1)]
-fn day4_part1(input: &str) -> usize {
-	day4(input, false)
-}
-
-#[aoc(day4, part2)]
-fn day4_part2(input: &str) -> usize {
-	day4(input, true)
-}
-
+#[aoc(part1=1767, part2=1192)]
 fn day4(input: &str, part2: bool) -> usize {
-	let [lower_bound, upper_bound]: [u32; 2] = input.split('-').map(|s| s.parse().unwrap()).take_n().unwrap();
+	let [lower_bound, upper_bound]: [u32; 2] = input.trim().split('-').map(|s| s.parse().unwrap()).take_n().unwrap();
 	(lower_bound..upper_bound)
 		.filter(|n| test(*n, part2))
 		.count()

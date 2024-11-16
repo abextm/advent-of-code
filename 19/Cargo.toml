@@ -12,8 +12,7 @@ debug = true
 
 
 [dependencies]
-aoc-runner = "0.3.0"
-aoc-runner-derive = "0.3.0"
+aoc-helper = { path = "../aoc-helper/aoc-helper" }
 
 strum = "0.16.0"
 strum_macros = "0.16.0"

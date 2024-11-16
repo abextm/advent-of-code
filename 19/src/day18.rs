@@ -271,12 +271,12 @@ impl<'a> NodeBuilder<'a> {
 	}
 }
 
-#[aoc(day18, part1)]
+#[aoc(part1=3918)]
 fn day18_part1(input: &str) -> usize {
 	solve::<1>(input)
 }
 
-#[aoc(day18, part2)]
+#[aoc(part2=2004)]
 fn day18_part2(input: &str) -> usize {
 	solve::<4>(input)
 }
@@ -475,9 +475,8 @@ impl<V> StateMap<usize, V> for Vec<Option<(usize, V)>> {
 	}
 }
 
-#[test]
-fn test_p2() {
-	assert_eq!(72, day18_part2("#############
+#[aoc(part2=72)]
+const complex: &str = "#############
 #g#f.D#..h#l#
 #F###e#E###.#
 #dCba...BcIJ#
@@ -486,5 +485,4 @@ fn test_p2() {
 #M###N#H###.#
 #o#m..#i#jk.#
 #############
-"));
-}
+";

@@ -75,27 +75,18 @@ impl Node {
 	}
 }
 
-fn get<'a>(s: String, map: &'a mut HashMap<String, Node>) -> &'a Node {
+fn get(s: String, map: &mut HashMap<String, Node>) -> &Node {
 	match map.entry(s.clone()) {
 		hash_map::Entry::Vacant(e) => e.insert(Node::new(s)),
 		hash_map::Entry::Occupied(e) => e.into_mut(),
 	}
 }
 
-#[aoc(day6, part1)]
-fn day6_part1(input: &str) -> usize {
-	day6(input, false)
-}
-
-#[aoc(day6, part2)]
-fn day6_part2(input: &str) -> usize {
-	day6(input, true)
-}
-
+#[aoc(part1=171213, part2=292)]
 fn day6(input: &str, part2: bool) -> usize {
 	let mut map = HashMap::<String, Node>::new();
 
-	for line in input.split("\n") {
+	for line in input.trim().split("\n") {
 		let slice: &[String] = &line
 			.split(")")
 			.take(2)

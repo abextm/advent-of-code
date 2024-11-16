@@ -1,15 +1,6 @@
 use std::collections::HashMap;
 
-#[aoc(day3, part1)]
-fn day3_part1(input: &str) -> u32 {
-	day3(input, false)
-}
-
-#[aoc(day3, part2)]
-fn day3_part2(input: &str) -> u32 {
-	day3(input, true)
-}
-
+#[aoc(part1=1626, part2=27330)]
 fn day3(input: &str, part2: bool) -> u32 {
 	let mut map = HashMap::<(i32, i32), [u32; 2]>::new();
 

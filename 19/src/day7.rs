@@ -1,16 +1,7 @@
 use crate::vm;
 use std::sync::mpsc;
 
-#[aoc(day7, part1)]
-fn day7_part1(input: &str) -> i64 {
-	day7(input, false)
-}
-
-#[aoc(day7, part2)]
-fn day7_part2(input: &str) -> i64 {
-	day7(input, true)
-}
-
+#[aoc(part1=46014, part2=19581200)]
 fn day7(input: &str, part2: bool) -> i64 {
 	let template = vm::new_from_str(input).unwrap();
 

@@ -3,12 +3,12 @@ use crate::vm;
 use std::collections::HashMap;
 use std::sync::mpsc;
 
-#[aoc(day11, part1)]
+#[aoc(part1=2093)]
 fn day11_part1(input: &str) -> usize {
 	day11(input, false).len()
 }
 
-#[aoc(day11, part2)]
+#[aoc(part2)]
 fn day11_part2(input: &str) -> String {
 	let panel = day11(input, true);
 
@@ -17,7 +17,7 @@ fn day11_part2(input: &str) -> String {
 	let ly = panel.keys().map(|x| x.1).min().unwrap();
 	let uy = panel.keys().map(|x| x.1).max().unwrap() + 1;
 
-	let mut s = String::with_capacity(((ux - lx) + 1) * (uy - ly) + 1);
+	let mut s = String::with_capacity((((ux - lx) + 1) * (uy - ly) + 1) as usize);
 	s.push('\n');
 	for y in ly..uy {
 		for x in lx..ux {
@@ -33,10 +33,10 @@ fn day11_part2(input: &str) -> String {
 	s
 }
 
-fn day11(input: &str, part2: bool) -> HashMap::<(usize, usize), i64> {
+fn day11(input: &str, part2: bool) -> HashMap::<(isize, isize), i64> {
 	let mut pos = (0, 0);
 	let mut direction = 0;
-	let mut panel = HashMap::<(usize, usize), i64>::new();
+	let mut panel = HashMap::new();
 
 	if part2 {
 		panel.insert(pos, 1);

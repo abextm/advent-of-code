@@ -116,8 +116,8 @@ impl Grid<Vec<u8>> {
 }
 
 impl<'a> Grid<&'a [u8]> {
-	pub fn from_char_grid(input: &'a str) -> Self {
-		let input = input.as_bytes();
+	pub fn from_char_grid<T: AsRef<[u8]> + ?Sized>(input: &'a T) -> Self {
+		let input = input.as_ref();
 		let width = memchr::memchr(b'\n', input)
 			.unwrap_or(input.len());
 		let stride = width + 1;

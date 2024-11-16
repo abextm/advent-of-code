@@ -2,14 +2,14 @@ use crate::itersort::IterSortEx;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
 
-#[aoc(day10, part1)]
+#[aoc(part1=263)]
 fn day10_part1(input: &str) -> usize {
 	let (map, _) = decode(input);
 	let (_, out) = find_best(&map);
 	out
 }
 
-#[aoc(day10, part2)]
+#[aoc(part2=1110)]
 fn day10_part2(input: &str) -> usize {
 	let (map, _) = decode(input);
 	let (best, _) = find_best(&map);

@@ -1,16 +1,12 @@
 use crate::vm;
 
-#[aoc(day5, part1)]
-fn day5_part1(input: &str) -> i64 {
-	day5(input, 1)
-}
-
-#[aoc(day5, part2)]
-fn day5_part2(input: &str) -> i64 {
-	day5(input, 5)
-}
-
-fn day5(input: &str, mod_id: i64) -> i64 {
+#[aoc(part1=6761139, part2=9217546)]
+fn day5(input: &str, part: i64) -> i64 {
+	let mod_id = match part {
+		1 => 1,
+		2 => 5,
+		_ => panic!(),
+	};
 	let mut vals = vm::new_from_str(input)
 		.unwrap()
 		.with_input([mod_id].iter().cloned())

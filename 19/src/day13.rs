@@ -10,7 +10,7 @@ mod tile {
 	pub const BALL: i64 = 4;
 }
 
-#[aoc(day13, part1)]
+#[aoc(part1=296)]
 fn day13_part1(input: &str) -> usize {
 	let mut vm = vm::new_from_str(input).unwrap().map(|x| x.unwrap());
 	let mut set = HashSet::new();
@@ -23,7 +23,7 @@ fn day13_part1(input: &str) -> usize {
 	set.len()
 }
 
-#[aoc(day13, part2)]
+#[aoc(part2=13824)]
 fn day13_part2(input: &str) -> i64 {
 	let mut vm = vm::new_from_str(input)
 		.unwrap()

@@ -1,11 +1,13 @@
-use crate::vm;
+use crate::{grid, vm};
 use std::collections::{HashSet, HashMap};
+use crate::day17::tile::STRUCTURE;
+use crate::grid::Grid;
 
 mod tile {
-	pub const NEWLINE: i64 = '\n' as i64;
-	pub const STRUCTURE: i64 = '#' as i64;
-	pub const START: i64 = '^' as i64;
-	pub const SPACE: i64 = '.' as i64;
+	pub const NEWLINE: u8 = b'\n';
+	pub const STRUCTURE: u8 = b'#';
+	pub const START: u8 = b'^';
+	pub const SPACE: u8 = b'.';
 }
 
 const DIRS: [(isize, isize); 4] = [
@@ -15,32 +17,15 @@ const DIRS: [(isize, isize); 4] = [
 	(-1, 0),
 ];
 
-#[aoc(day17, part1)]
+#[aoc(part1=5680)]
 fn day17_part1(input: &str) -> usize {
 	let state = vm::new_from_str(input).unwrap();
-	let map = state.map(|x| x.unwrap()).collect::<Vec<_>>();
-	let width = map
-		.iter()
-		.position(|x| *x == tile::NEWLINE)
-		.expect("no newlines");
-	let stride = width + 1;
-
-	let mut alignment = 0;
-	for y in 1..(map.len() / stride) - 1 {
-		for x in 1..(width - 1) {
-			let coord = x + (y * stride);
-			if map[coord] == tile::STRUCTURE
-				&& map[coord - 1] == tile::STRUCTURE
-				&& map[coord + 1] == tile::STRUCTURE
-				&& map[coord - stride] == tile::STRUCTURE
-				&& map[coord + stride] == tile::STRUCTURE
-			{
-				alignment += x * y;
-			}
-		}
-	}
-
-	alignment
+	let map = state.map(|x| x.unwrap() as u8).collect::<Vec<_>>();
+	let map = Grid::from_char_grid(&map);
+	map.iter()
+		.filter(|&(x, y, &t)| t == tile::STRUCTURE && grid::ADJ4.iter().all(|(dx, dy)| map.get(x as isize + dx, y as isize + dy) == Some(&STRUCTURE)))
+		.map(|(x, y, _)| x * y)
+		.sum()
 }
 
 fn get_grid<T>(grid: &[T], stride: usize, coord: (isize, isize)) -> Option<&T> {
@@ -56,22 +41,19 @@ fn add2<T: std::ops::Add>(a: (T, T), b: (T, T)) -> (<T as std::ops::Add>::Output
 	(a.0 + b.0, a.1 + b.1)
 }
 
-#[aoc(day17, part2)]
+#[aoc(part2=895965)]
 fn day17_part2(input: &str) -> i64 {
 	let mut state = vm::new_from_str(input).unwrap();
 	let map = state.clone()
-		.map(|x| x.unwrap())
+		.map(|x| x.unwrap() as u8)
 		.collect::<Vec<_>>();
-	let width = map
-		.iter()
-		.position(|x| *x == tile::NEWLINE)
-		.expect("no newlines");
-	let stride = width + 1;
+	let map = Grid::from_char_grid(&map);
 
-	let start = map.iter()
-		.position(|x| *x == tile::START)
+	let start = map
+		.filter_enumerate(|&t| t == tile::START)
+		.next()
 		.expect("no start");
-	let start = ((start % stride) as isize, (start / stride) as isize);
+	let start = (start.0 as isize, start.1 as isize);
 
 	// inputs seem to have the trait that at an intersection you always continue straight
 	// if this were not true we would have to do actual pathfinding
@@ -83,7 +65,7 @@ fn day17_part2(input: &str) -> i64 {
 		let mut dir = DIRS
 			.iter()
 			.enumerate()
-			.filter(|(_, d)| get_grid(&map, stride, add2(start, **d)).cloned() == Some(tile::STRUCTURE))
+			.filter(|(_, d)| map.get(start.0 + d.0, start.1 + d.1).cloned() == Some(tile::STRUCTURE))
 			.next()
 			.expect("no structure by start")
 			.0;
@@ -99,7 +81,7 @@ fn day17_part2(input: &str) -> i64 {
 			] {
 				let newdir = (dir + newdir) % 4;
 				let newcoord = add2(coord, DIRS[newdir]);
-				if get_grid(&map, stride, newcoord) == Some(&tile::STRUCTURE) {
+				if map.get(newcoord.0, newcoord.1) == Some(&tile::STRUCTURE) {
 					active.1 += 1;
 					if dir != newdir {
 						path.push(active);
@@ -125,7 +107,7 @@ fn day17_part2(input: &str) -> i64 {
 			.insert(i);
 	}
 
-//	print!("{}", map.iter().map(|x| std::char::from_u32(*x as u32).unwrap()).collect::<String>());
+	//print!("{}", map.iter().map(|x| std::char::from_u32(*x as u32).unwrap()).collect::<String>());
 
 	state.memory[0] = 2;
 	for c in state

@@ -1,4 +1,4 @@
-#[aoc(day8, part1)]
+#[aoc(part1=2480)]
 fn day8_part1(input: &str) -> usize {
 	checksum(decode(input, (25, 6)))
 }
@@ -16,7 +16,7 @@ fn checksum(layers: Vec<Vec<u8>>) -> usize {
 
 fn decode(input: &str, dims: (usize, usize)) -> Vec<Vec<u8>> {
 	let layer_len = dims.0 * dims.1;
-	let mut iter = input.chars().map(|x| x as u8 - '0' as u8);
+	let mut iter = input.trim().chars().map(|x| x as u8 - '0' as u8);
 	(0..)
 		.map(|_| iter.by_ref().take(layer_len).collect::<Vec<u8>>())
 		.take_while(|x| x.len() != 0)
@@ -28,7 +28,7 @@ fn checksum_example() {
 	assert_eq!(checksum(decode("123456789012", (3, 2))), 1);
 }
 
-#[aoc(day8, part2)]
+#[aoc(part2)]
 fn day8_part2(input: &str) -> String {
 	let dims = (25, 6);
 	let img = composite(decode(input, dims));
