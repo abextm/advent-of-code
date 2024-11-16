@@ -1,0 +1,14 @@
+[package]
+name = "aoc-helper"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+
+[dependencies]
+clap = { version = "4.5.20", features = ["derive"] }
+linkme = "0.3.29"
+reqwest = { version = "0.12.9", features = ["blocking"] }
+httpdate = "1.0.3"
+aoc-helper-macro = { path = "../aoc-helper-macro" }
+#regex = "1.11.1"
