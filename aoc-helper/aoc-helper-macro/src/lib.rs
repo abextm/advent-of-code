@@ -72,7 +72,7 @@ impl AOCBuilder {
 				return Err(input.error("Marked with part 1 and 2 but no arguments"));
 			}
 
-			if multipart || part1.is_some() {
+			if multipart || part1.is_some() || !part2.is_some() {
 				self.generate_solution(fnname, day, 1, call(1), part1);
 			}
 			if multipart || part2.is_some() {
