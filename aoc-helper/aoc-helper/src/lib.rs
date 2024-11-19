@@ -4,6 +4,7 @@ use std::{fs, io};
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, Write};
 use std::panic::catch_unwind;
+use std::time::Instant;
 use clap::Parser;
 use reqwest::header::{HeaderMap, HeaderValue};
 
@@ -25,7 +26,8 @@ struct Args {
 }
 
 thread_local! {
-	static BACKTRACE: Cell<Option<Backtrace>> = const { Cell::new(None) };
+	static BACKTRACE: Cell<Option<Backtrace>> = Cell::new(None);
+	static TIME: Cell<Option<(Instant, Instant)>> = Cell::new(None);
 }
 
 fn get_year() -> u32 {
@@ -105,8 +107,28 @@ pub fn dispatch() {
 	}
 
 	if args.test != Some(true) {
+		let start = Instant::now();
+		TIME.set(Some((start, start)));
 		let v = {solution.solve}(&input);
+		time0("Done", false);
+		TIME.set(None);
 		println!("AoC {} day {} part {}: {}", year, solution.day, solution.part, v);
+	}
+}
+
+pub fn time(message: &str) {
+	time0(message, true);
+}
+
+fn time0(message: &str, force_double: bool) {
+	if let Some(v) = TIME.get() {
+		let now = Instant::now();
+		if force_double || v.1 != v.0 {
+			println!("{} {:?} ({:?} total)", message, now - v.1, now - v.0)
+		} else {
+			println!("Took {:?}", now - v.1);
+		}
+		TIME.set(Some((v.0, now)));
 	}
 }
 
