@@ -10,6 +10,7 @@ pub enum EvalError {
 	InvalidAddressingMode(i64),
 	IllegalAddressingMode(i64),
 	EndOfInput,
+	UnexpectedResult(EvalResult),
 }
 
 impl error::Error for EvalError {
@@ -18,7 +19,7 @@ impl error::Error for EvalError {
 	}
 }
 
-#[derive(Debug, Display, PartialEq)]
+#[derive(Debug, Display, PartialEq, Clone)]
 pub enum EvalResult {
 	Ok,
 	Output(i64),
@@ -127,6 +128,17 @@ impl<I: Iterator<Item = i64>> State<I> {
 		self.memory[1..1 + args.len()].clone_from_slice(args);
 		self.run()?;
 		Ok(self.memory[0])
+	}
+
+	pub fn consume_input(&mut self) -> Result<(), EvalError> {
+		loop {
+			match self.single_step() {
+				Ok(EvalResult::Ok) => continue,
+				Ok(res) => return Err(EvalError::UnexpectedResult(res)),
+				Err(EvalError::EndOfInput) => return Ok(()),
+				Err(v) => return Err(v),
+			}
+		}
 	}
 
 	pub fn run(&mut self) -> Result<(), EvalError> {
