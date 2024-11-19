@@ -1,7 +1,8 @@
 use std::backtrace::Backtrace;
 use std::cell::Cell;
 use std::{fs, io};
-use std::io::Read;
+use std::fs::OpenOptions;
+use std::io::{Read, Seek, Write};
 use std::panic::catch_unwind;
 use clap::Parser;
 use reqwest::header::{HeaderMap, HeaderValue};
@@ -15,8 +16,12 @@ pub use aoc_helper_macro::aoc;
 struct Args {
 	#[arg(short, long)]
 	day: Option<u8>,
+	#[arg(short, long)]
 	part: Option<u8>,
+	#[arg(short, long)]
 	test: Option<bool>,
+	#[arg(long)]
+	template: bool,
 }
 
 thread_local! {
@@ -39,7 +44,20 @@ pub fn dispatch() {
 	let year = get_year();
 	let args = Args::parse();
 
-	let solution = match internal::get_solution(args.day, args.part) {
+	let solution = internal::get_solution(args.day, args.part);
+
+	if args.template == true {
+		let day = match solution {
+			Some(v) => v.day + 1,
+			None => 1,
+		};
+
+		template_solution(day);
+
+		return;
+	}
+
+	let solution = match solution{
 		Some(v) => v,
 		None => panic!("No solutions"),
 	};
@@ -199,4 +217,37 @@ fn fetch_input(year: u32, day: u8) -> String {
 	}
 
 	panic!("Please fill ~/.config/abex-aoc-credentials.txt with session token (cookie)");
+}
+
+fn template_solution(day: u8) {
+	OpenOptions::new()
+		.write(true)
+		.create_new(true)
+		.open(format!("src/day{}.rs", day))
+		.expect("failed to open template file")
+		.write_all("#[aoc()]
+fn solve(input: &str) -> impl std::fmt::Debug {
+
+
+	0
+}".as_ref()).expect("Failed to write template");
+
+	let mut main_fi = OpenOptions::new()
+		.write(true)
+		.read(true)
+		.open("src/main.rs")
+		.expect("failed to open main.rs");
+
+	let mut main = String::new();
+	main_fi.read_to_string(&mut main).unwrap();
+
+	let index = match main.rfind("mod day") {
+		Some(index) => index + main[index..].find("\n").unwrap_or(main.len() - index),
+		None => main.len(),
+	};
+
+	main_fi.seek(io::SeekFrom::Start(index as u64)).unwrap();
+	main_fi.write_all(format!("\nmod day{};", day).as_ref()).unwrap();
+	main_fi.write_all(main[index..].as_ref()).unwrap();
+
 }
