@@ -81,13 +81,11 @@ struct Fn {
 
 impl Fn {
 	fn add(&mut self, v: i64) {
-		// f(x) = (x + a) * m + v
-		let v = self.modmul(v, self.modinv(self.mul));
 		self.add = (self.add + v) % self.md;
 	}
 
 	fn mul(&mut self, v: i64) {
-		// f(x) = (x + a) * m * v
+		self.add = self.modmul(self.add, v);
 		self.mul = self.modmul(self.mul, v);
 	}
 
@@ -105,14 +103,14 @@ impl Fn {
 	}
 
 	fn eval(&self, v: i64) -> i64 {
-		self.modmul(v + self.add, self.mul)
+		(self.modmul(v, self.mul) + self.add).rem_euclid(self.md)
 	}
 
 	fn reverse(&self) -> Self {
 		// f(x) = (x * mul^-1) - add
 		let mut f = Fn::new(self.md);
-		f.mul(f.modinv(self.mul));
 		f.add(-self.add);
+		f.mul(f.modinv(self.mul));
 		f
 	}
 
@@ -130,14 +128,12 @@ impl Fn {
 
 	fn eval_iterated(&self, x: i64, n: i64) -> i64 {
 		// convert to f(x) = mul * x + add
-		let add = self.modmul(self.add, self.mul);
-
 		let mulN = self.modpow(self.mul, n);
-		(self.modmul(mulN, x) + self.modmul(self.modmul(mulN - 1, self.modinv(self.mul - 1)), add)).rem_euclid(self.md)
+		(self.modmul(mulN, x) + self.modmul(self.modmul(mulN - 1, self.modinv(self.mul - 1)), self.add)).rem_euclid(self.md)
 	}
 }
 
-#[aoc(part2)]
+#[aoc(part2=58966729050483)]
 fn part2(input: &str) -> impl std::fmt::Debug {
 	let moves = parse(input);
 
@@ -145,15 +141,7 @@ fn part2(input: &str) -> impl std::fmt::Debug {
 	for mov in moves {
 		mov.forward_fn(&mut fun);
 	}
-	
-	let rev = fun.reverse();
-	
-	let mut v = 2020;
-	for i in 1..5 {
-		v = rev.eval(v);
-		let it = rev.eval_iterated(2020, i);
-		assert_eq!(it, v, "{}", i);
-	}
 
+	let rev = fun.reverse();
 	rev.eval_iterated(2020, 101741582076661)
 }
