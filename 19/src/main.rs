@@ -29,6 +29,7 @@ mod day20;
 mod day21;
 mod day22;
 mod day23;
+mod day24;
 mod grid;
 mod dijkstra;
 
