@@ -4,7 +4,7 @@ use std::iter;
 use std::str;
 use strum_macros::Display;
 
-#[derive(Debug, Display, Clone)]
+#[derive(Debug, Display, Clone, PartialEq, Eq)]
 pub enum EvalError {
 	UnknownOpcode(i64),
 	InvalidAddressingMode(i64),
@@ -19,7 +19,7 @@ impl error::Error for EvalError {
 	}
 }
 
-#[derive(Debug, Display, PartialEq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone)]
 pub enum EvalResult {
 	Ok,
 	Output(i64),
