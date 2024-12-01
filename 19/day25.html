@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+#map {
+		padding: 1em;
+		position: relative;
+}
+#map > pre {
+		position: absolute;
+		border: 1px solid #000;
+		width: var(--width);
+		height: var(--height);
+}
+#map > .north {
+    border-top: 1px dotted #000;
+}
+#map > .south {
+    border-bottom: 1px dotted #000;
+}
+#map > .west {
+    border-left: 1px dotted #000;
+}
+#map > .east {
+    border-right: 1px dotted #000;
+}
+#map .pos {
+		background: #ccf;
+}
+	</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="controls">
+	<button onclick="north()">^</button><br>
+	<button onclick="west()">&lt</button><button onclick="east()">&gt;</button><br>
+	<button onclick="south()">v</button><br>
+	autotake <input type="checkbox" id="autotake" checked/>
+</div>
+<pre id="inv"></pre>
+<script>
+	let ws = new WebSocket("http://127.0.0.1:8000");
+	let iter = {
+		events: [],
+		wait: [],
+		next() {
+			let ev = this.events.shift();
+			if (ev) {
+				return ev;
+			} else {
+				return new Promise((ok, err) => this.wait.push({ok, err}));
+			}
+		}
+	};
+	let map = JSON.parse(localStorage["map"] || "{}");
+	ws.addEventListener("message", ev => {
+		let wait = iter.wait.shift();
+		let v = {value: ev.data};
+		if (wait) {
+			wait.ok(v);
+		} else {
+			wait.events.push(v);
+		}
+	});
+
+	let x = 0, y = 0;
+	let inv = [];
+
+	north = () => { movecmd("north"); y--; };
+	south = () => { movecmd("south"); y++; };
+	east = () => { movecmd("east"); x++; };
+	west = () => { movecmd("west"); x--; };
+
+	document.addEventListener("keydown", ev => {
+		switch (ev.key) {
+			case "ArrowLeft": west(); break;
+			case "ArrowRight": east(); break;
+			case "ArrowUp": north(); break;
+			case "ArrowDown": south(); break;
+			default: return;
+		}
+		ev.preventDefault();
+	});
+
+	let autotakeEl = document.getElementById("autotake");
+	let invEl = document.getElementById("inv");
+	let notake = new Set(["giant electromagnet", "molten lava", "escape pod", "photons", "infinite loop"]);
+
+	let lastcmd = "";
+
+	function movecmd(msg) {
+		lastcmd = msg;
+		dropping = false;
+		return cmd(msg);
+	}
+
+	function cmd(msg) {
+		console.log(msg);
+		ws.send(msg + "\n");
+	}
+
+	function drawMap() {
+		let root = document.getElementById("map");
+		for (; root.lastChild; ) root.lastChild.remove();
+
+		let width = 150;
+		let height = 75;
+
+		root.style.setProperty("--width", width + "px");
+		root.style.setProperty("--height", height + "px");
+
+		let minx = 0, miny = 0, maxx = 0, maxy = 0;
+		for (let room of Object.values(map)) {
+			let px = room.x * width;
+			let py = room.y * height;
+			minx = Math.min(minx, px);
+			miny = Math.min(miny, py);
+			maxx = Math.max(maxx, px);
+			maxy = Math.max(maxy, py);
+			let div = document.createElement("pre");
+			let text = room.title || "";
+			text += "\n" + (room.items?.join("\n") || "");
+			div.textContent = text;
+			div.className = room.doors?.join(" ") || "";
+			if (room.x === x && room.y === y) {
+				div.classList.add("pos");
+			}
+			div.style.left = px + "px";
+			div.style.top = py + "px";
+			root.append(div);
+		}
+
+		root.style.width = (maxx - minx + width) + "px";
+		root.style.height = (maxy - miny + height) + "px";
+		root.style.marginLeft = (-minx) + "px";
+		root.style.marginTop = (-miny) + "px";
+
+		invEl.textContent = inv.join("\n");
+	}
+
+	let dropping = false;
+	let dropped = [];
+
+	(async () => {
+		let lastX = x, lastY = y;
+		for await (let msg of {[Symbol.asyncIterator]: () => iter}) {
+			console.log(msg);
+			let m;
+			let items = [];
+			if (/You can't go that way\./.test(msg)) {
+				x = lastX;
+				y = lastY;
+			}
+			if (m = /Items here:\n((?:- .*\n)+)/.exec(msg)) {
+				items = m[1].trim().split("\n").map(s => s.substring(2));
+			}
+
+			if (m = /Droids on this ship are (lighter|heavier) than the detected value/.exec(msg)) {
+				x = lastX;
+				y = lastY;
+
+				if (inv.length > 0 && m[1] === "lighter") {
+					dropping = true;
+					let i = inv.shift();
+					ws.send("drop " + i + "\n" + lastcmd + "\n");
+					dropped.push(i);
+				} else if (dropped.length > 0 && m[1] === "heavier") {
+					let [i] = dropped.splice(~~(Math.random()*dropped.length), 1);
+					//let i = dropped.shift();
+					inv.push(i);
+					ws.send("take " + i + "\n" + lastcmd + "\n");
+				}
+				continue;
+			}
+			let ment = map[`${x}_${y}`] ??= {x, y};
+			if (m = /== (.*) ==\n+/.exec(msg)) {
+				ment.title = m[1];
+			}
+			if (m = /Doors here lead:\n((?:- .*\n)+)/.exec(msg)) {
+				ment.doors = m[1].trim().split("\n").map(s => s.substring(2));
+			}
+
+			dropped = [];
+			dropping = false;
+
+			ment.items ??= items;
+			for (let i of items) {
+				if (autotakeEl.checked && !notake.has(i) && !dropping) {
+					inv.push(i);
+					ws.send(`take ${i}\n`);
+				}
+			}
+
+			localStorage["map"] = JSON.stringify(map);
+			drawMap();
+			lastX = x; lastY = y;
+		}
+	})();
+</script>
+</body>
+</html>
