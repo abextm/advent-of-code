@@ -3,6 +3,7 @@
 #[macro_use] extern crate aoc_helper;
 
 mod day1;
+mod day2;
 
 aoc_year!(24);
 
