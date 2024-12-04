@@ -2,9 +2,12 @@
 
 #[macro_use] extern crate aoc_helper;
 
+mod grid;
+
 mod day1;
 mod day2;
 mod day3;
+mod day4;
 
 aoc_year!(24);
 

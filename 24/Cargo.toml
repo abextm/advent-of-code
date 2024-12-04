@@ -14,3 +14,4 @@ debug = true
 [dependencies]
 aoc-helper = { path = "../aoc-helper/aoc-helper" }
 regex = "1"
+memchr = "2.7.4"
