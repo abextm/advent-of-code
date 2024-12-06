@@ -12,7 +12,7 @@ fn part2(input: &str) -> impl std::fmt::Debug {
 	let mut en = true;
 	let mut sum = 0i32;
 	for c in re.captures_iter(input) {
-		if let Some(v) = c.get(1) {
+		if let Some(_v) = c.get(1) {
 			if en {
 				sum += c.get(1).unwrap().as_str().parse::<i32>().unwrap() * c.get(2).unwrap().as_str().parse::<i32>().unwrap()
 			}
