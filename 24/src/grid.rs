@@ -8,7 +8,7 @@ use strength_reduce::StrengthReducedUsize;
 
 #[derive(Clone)]
 pub struct Grid<const ND: usize, M> {
-	array: M,
+	pub array: M,
 	stride: Ve<ND>,
 	shape: Ve<ND>,
 	stride_order: [u8; ND],
@@ -127,6 +127,46 @@ impl<const ND: usize, T, M: Deref<Target=[T]>> Grid<ND, M> {
 			reduced_stride: self.reduced_stride.clone(),
 		}
 	}
+
+	pub fn map<J>(&self, f: impl Fn(Ve<ND>, &T) -> J) -> Grid<ND, Vec<J>> {
+		let mut stride = 1;
+		let strides = Ve(self.shape.0.map(|dim| {
+			let v = stride;
+			stride *= dim;
+			v
+		}));
+		let mut out = Vec::with_capacity(stride as usize);
+		let stride_order = array::from_fn(|i| i as u8);
+		let it = GridPointIter {
+			shape: self.shape,
+			stride_order,
+			pos: Some([0usize; ND].into()),
+		};
+
+		for pt in it {
+			out.push(f(pt, &self[pt]));
+		}
+
+		Grid {
+			array: out,
+			stride: strides,
+			shape: self.shape,
+			stride_order,
+			reduced_stride: OnceCell::new(),
+		}
+	}
+}
+
+impl<const ND: usize, T: Clone, M: Deref<Target=[T]>> Grid<ND, M> {
+	pub fn cloned(&self) -> Grid<ND, Vec<T>> {
+		Grid {
+			array: Vec::from(&self.array as &[T]),
+			stride: self.stride,
+			shape: self.shape,
+			stride_order: self.stride_order,
+			reduced_stride: self.reduced_stride.clone(),
+		}
+	}
 }
 
 impl<const ND: usize, M: Deref<Target=[u8]>> Grid<ND, M> {
@@ -160,6 +200,35 @@ impl Grid<2, &[u8]> {
 			stride: [1, stride].into(),
 			shape: [width, height].into(),
 			stride_order: [0, 1],
+			reduced_stride: OnceCell::new(),
+		}
+	}
+}
+
+impl Grid<3, &[u8]> {
+	pub fn from_char_grid_list(cg: &(impl AsRef<[u8]> + ?Sized)) -> Grid<3, &[u8]> {
+		let input = cg.as_ref();
+		let width = memchr::memchr(b'\n', input)
+			.unwrap_or(input.len());
+		let stride = width + 1;
+		let mut h_stride = 0;
+		while h_stride < input.len() {
+			if input[h_stride] == b'\n' {
+				while input[h_stride] == b'\n' {
+					h_stride += 1;
+				}
+				h_stride -= 1;
+				break;
+			}
+			h_stride += stride;
+		}
+		let depth = (input.len() + 1) / h_stride;
+		let height = h_stride / stride;
+		Grid {
+			array: input,
+			stride: [1, stride, h_stride].into(),
+			shape: [width, height, depth].into(),
+			stride_order: [0, 1, 2],
 			reduced_stride: OnceCell::new(),
 		}
 	}
@@ -219,7 +288,7 @@ impl<const ND: usize, T, M: Deref<Target=[T]>> Grid<ND, M> {
 	}
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Ve<const N: usize>(pub [isize; N]);
 
 impl<const N: usize> Ve<N> {
