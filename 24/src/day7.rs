@@ -51,7 +51,7 @@ fn part2(input: &str) -> impl std::fmt::Debug {
 			let end = 3i32.pow(line.len() as u32 - 1);
 			if (0..end).any(|mut bit| {
 				let mut res = line[0].0;
-				for (i, (v, mul)) in line[1..].iter().enumerate() {
+				for (v, mul) in line[1..].iter() {
 					match bit % 3 {
 						0 => res += v,
 						1 => res *= v,

@@ -2,7 +2,7 @@
 
 use std::{array};
 use std::cell::OnceCell;
-use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, Rem, Sub, Div};
+use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, Rem, Sub, Div, Neg};
 use memchr::memchr_iter;
 use strength_reduce::StrengthReducedUsize;
 
@@ -165,6 +165,25 @@ impl<const ND: usize, T: Clone, M: Deref<Target=[T]>> Grid<ND, M> {
 			shape: self.shape,
 			stride_order: self.stride_order,
 			reduced_stride: self.reduced_stride.clone(),
+		}
+	}
+}
+
+impl<const ND: usize, T: Clone> Grid<ND, Vec<T>> {
+	pub fn new(shape: impl Into<Ve<ND>>, val: T) -> Self {
+		let mut stride = 1;
+		let shape= shape.into();
+		let strides = Ve(shape.0.map(|dim| {
+			let v = stride;
+			stride *= dim;
+			v
+		}));
+		Grid {
+			array: vec![val; stride as usize],
+			stride: strides,
+			shape,
+			stride_order: array::from_fn(|i| i as u8),
+			reduced_stride: OnceCell::new(),
 		}
 	}
 }
@@ -395,6 +414,14 @@ macro_rules! vec_op {
 			}
 		}
   };
+}
+
+impl<const N: usize> Neg for Ve<N> {
+	type Output = Ve<N>;
+
+	fn neg(self) -> Self::Output {
+		Ve(self.0.map(|v| -v))
+	}
 }
 
 vec_op!(Add, add);

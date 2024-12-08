@@ -5,7 +5,7 @@ mod attr;
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, ToTokens};
 use syn::parse::{ParseStream, Parser};
-use syn::{parse_macro_input, FnArg, ItemConst, ItemFn, Pat, Token, Type};
+use syn::{parse_macro_input, FnArg, GenericParam, ItemConst, ItemFn, Pat, Token, Type};
 use syn::__private::Span;
 use syn::punctuated::Punctuated;
 use syn::Result;
@@ -58,6 +58,12 @@ impl AOCBuilder {
 				(Box::new(move |p| {
 					let arg = arg(p);
 					quote! { #fnname(input, #arg) }
+				}), true)
+			} else if let Some(GenericParam::Const(arg)) = itemfn.sig.generics.params.get(0) {
+				let arg = constant_for_arg(&arg.ident, &arg.ty)?;
+				(Box::new(move |p| {
+					let arg = arg(p);
+					quote! { #fnname::<#arg>(input) }
 				}), true)
 			} else {
 				(Box::new(|_| quote! { #fnname(input) }), false)
