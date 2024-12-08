@@ -6,10 +6,13 @@ use std::io::{Read, Seek, Write};
 use std::panic::catch_unwind;
 use std::time::Instant;
 use clap::Parser;
+use criterion::{Bencher, Criterion};
 use reqwest::header::{HeaderMap, HeaderValue};
 
 #[doc(hidden)]
 pub mod internal;
+
+pub use criterion;
 
 pub use aoc_helper_macro::aoc;
 
@@ -23,6 +26,8 @@ struct Args {
 	test: Option<bool>,
 	#[arg(long)]
 	template: bool,
+	#[arg(long)]
+	bench: bool,
 }
 
 thread_local! {
@@ -44,7 +49,11 @@ fn get_year() -> u32 {
 
 pub fn dispatch() {
 	let year = get_year();
-	let args = Args::parse();
+	let args =  if let Ok(a) = std::env::var("AOC_ARGS") {
+		Args::parse_from(["AOC_ARGS="].into_iter().chain(a.split(" ")))
+	} else {
+		Args::parse()
+	};
 
 	let solution = internal::get_solution(args.day, args.part);
 
@@ -106,6 +115,20 @@ pub fn dispatch() {
 		}
 	}
 
+	if args.bench {
+		let name = format!("{} day {} part {}", year, solution.day, solution.part);
+		Criterion::default()
+			.configure_from_args() // you have to use AOC_ARGS with --bench
+			.profile_time(None) // bleh
+			.bench_function(&name , |b| (solution.bench_fn)(b, &input));
+
+		Criterion::default()
+			.configure_from_args() // you have to use AOC_ARGS with --bench
+			.final_summary();
+
+		return;
+	}
+
 	if args.test != Some(true) {
 		let start = Instant::now();
 		TIME.set(Some((start, start)));
@@ -136,6 +159,7 @@ pub struct Solution {
 	pub day: u8,
 	pub part: u8,
 	pub solve: fn(&str) -> String,
+	pub bench_fn: fn(&mut Bencher, &str) -> (),
 }
 
 pub struct Test {

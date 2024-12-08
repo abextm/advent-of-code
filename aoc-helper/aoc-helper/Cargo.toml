@@ -11,4 +11,4 @@ linkme = "0.3.29"
 reqwest = { version = "0.12.9", features = ["blocking"] }
 httpdate = "1.0.3"
 aoc-helper-macro = { path = "../aoc-helper-macro" }
-#regex = "1.11.1"
+criterion = "0.5.1"

@@ -121,6 +121,10 @@ impl AOCBuilder {
 					let result = #call;
 					::std::format!("{:?}", result)
 				},
+				bench_fn: |b, input| b.iter(|| {
+					let input = ::aoc_helper::criterion::black_box(input);
+					#call
+				}),
 			};
 		});
 
