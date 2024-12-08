@@ -99,6 +99,17 @@ impl<const ND: usize, V: Into<Ve<ND>>, T, M: DerefMut<Target=[T]>> IndexMut<V> f
 	}
 }
 
+impl<const ND: usize, M> Grid<ND, M> {
+	pub fn transpose(&mut self, indexes: [usize; ND]) {
+		self.stride = Ve(array::from_fn(|i| self.stride.0[indexes[i]]));
+		self.shape = Ve(array::from_fn(|i| self.shape.0[indexes[i]]));
+		self.stride_order = self.stride_order.map(|v| indexes[v as usize] as u8);
+		if let Some(rs) = self.reduced_stride.get_mut() {
+			*rs = array::from_fn(|i| rs[indexes[i]]);
+		}
+	}
+}
+
 impl<const ND: usize, T, M: Deref<Target=[T]>> Grid<ND, M> {
 	pub fn get<V: Into<Ve<ND>>>(&self, index: V) -> Option<&T> {
 		self.idx(index.into()).map(|idx| &self.array[idx])
@@ -155,6 +166,24 @@ impl<const ND: usize, T, M: Deref<Target=[T]>> Grid<ND, M> {
 			reduced_stride: OnceCell::new(),
 		}
 	}
+
+	pub fn from_slice(shape: impl Into<Ve<ND>>, val: M) -> Self {
+		let mut stride = 1;
+		let shape = shape.into();
+		let strides = Ve(shape.0.map(|dim| {
+			let v = stride;
+			stride *= dim;
+			v
+		}));
+		assert_eq!(val.len(), stride as usize);
+		Grid {
+			array: val,
+			stride: strides,
+			shape,
+			stride_order: array::from_fn(|i| i as u8),
+			reduced_stride: OnceCell::new(),
+		}
+	}
 }
 
 impl<const ND: usize, T: Clone, M: Deref<Target=[T]>> Grid<ND, M> {
@@ -172,7 +201,7 @@ impl<const ND: usize, T: Clone, M: Deref<Target=[T]>> Grid<ND, M> {
 impl<const ND: usize, T: Clone> Grid<ND, Vec<T>> {
 	pub fn new(shape: impl Into<Ve<ND>>, val: T) -> Self {
 		let mut stride = 1;
-		let shape= shape.into();
+		let shape = shape.into();
 		let strides = Ve(shape.0.map(|dim| {
 			let v = stride;
 			stride *= dim;
