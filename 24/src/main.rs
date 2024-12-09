@@ -1,4 +1,5 @@
 #![feature(iter_next_chunk)]
+#![feature(iter_array_chunks)]
 
 #[macro_use] extern crate aoc_helper;
 
@@ -12,6 +13,7 @@ mod day5;
 mod day6;
 mod day7;
 mod day8;
+mod day9;
 
 aoc_year!(24);
 
