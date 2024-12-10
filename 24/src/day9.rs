@@ -101,7 +101,7 @@ fn part2(input: &str) -> impl std::fmt::Debug {
 	let mut block_id = 0;
 
 	for (file_id, [v, empty]) in map.iter() {
-		for i in 0..*v {
+		for _i in 0..*v {
 			checksum += file_id * block_id;
 			block_id += 1;
 		}
