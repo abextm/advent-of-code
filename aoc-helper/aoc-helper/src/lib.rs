@@ -77,7 +77,7 @@ pub fn dispatch() {
 
 	unsafe { std::env::set_var("RUST_BACKTRACE", "1"); }
 
-	if args.test != Some(false) {
+	let test_results = if args.test != Some(false) {
 		let old_hook = std::panic::take_hook();
 
 		std::panic::set_hook(Box::new(|_| {
@@ -113,7 +113,11 @@ pub fn dispatch() {
 		} else {
 			println!("{} / {} tests passed. {} Failed!", num_ok, num_all, num_all - num_ok);
 		}
-	}
+
+		Some((num_all, num_ok))
+	} else {
+		None
+	};
 
 	if args.bench {
 		let name = format!("{} day {} part {}", year, solution.day, solution.part);
@@ -125,17 +129,23 @@ pub fn dispatch() {
 		Criterion::default()
 			.configure_from_args() // you have to use AOC_ARGS with --bench
 			.final_summary();
-
-		return;
 	}
 
-	if args.test != Some(true) {
+	if args.test != Some(true) && !args.bench {
 		let start = Instant::now();
 		TIME.set(Some((start, start)));
 		let v = {solution.solve}(&input);
 		time0("Done", false);
 		TIME.set(None);
 		println!("AoC {} day {} part {}: {}", year, solution.day, solution.part, v);
+	}
+
+	if let Some((num_all, num_ok)) = test_results {
+		if num_all == num_ok {
+			println!("All #[aoc] tests pass!")
+		} else {
+			println!("{} / {} tests passed. {} Failed!", num_ok, num_all, num_all - num_ok);
+		}
 	}
 }
 
