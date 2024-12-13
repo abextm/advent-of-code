@@ -343,6 +343,20 @@ impl<const N: usize> Ve<N> {
 	pub fn zero() -> Self {
 		Ve([0; N])
 	}
+
+	pub fn min_element(&self) -> isize {
+		self.0.iter().cloned().min().unwrap()
+	}
+
+	pub fn max_element(&self) -> isize {
+		self.0.iter().cloned().max().unwrap()
+	}
+}
+
+impl Ve<2> {
+	pub fn cross(&self, other: &Ve<2>) -> isize {
+		self[0] * other[1] - self[1] * other[0]
+	}
 }
 
 impl<const N: usize> From<[isize; N]> for Ve<N> {
