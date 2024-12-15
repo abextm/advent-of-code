@@ -351,6 +351,10 @@ impl<const N: usize> Ve<N> {
 	pub fn max_element(&self) -> isize {
 		self.0.iter().cloned().max().unwrap()
 	}
+	
+	pub fn rem_euclid(&self, rhs: Self) -> Self {
+		Ve(array::from_fn(|i| self[i].rem_euclid(rhs[i])))
+	}
 }
 
 impl Ve<2> {
