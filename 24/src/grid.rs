@@ -2,6 +2,7 @@
 
 use std::{array};
 use std::cell::OnceCell;
+use std::fmt::{Debug, Formatter};
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, Rem, Sub, Div, Neg};
 use memchr::memchr_iter;
 use strength_reduce::StrengthReducedUsize;
@@ -186,6 +187,44 @@ impl<const ND: usize, T, M: Deref<Target=[T]>> Grid<ND, M> {
 	}
 }
 
+impl<const ND: usize, T, M: Deref<Target=[T]>> Grid<ND, M> {
+	pub fn writef<F: Fn(&mut Formatter<'_>, Ve<ND>, &T) -> std::fmt::Result>(&self, w: &mut Formatter<'_>, f: &F) -> std::fmt::Result {
+		let it = GridPointIter {
+			shape: self.shape,
+			stride_order: array::from_fn(|i| i as u8),
+			pos: Some([0usize; ND].into()),
+		};
+
+		for pt in it {
+			if pt != Ve::zero() {
+				for i in pt.0.iter() {
+					if *i == 0 {
+						write!(w, "\n")?;
+					} else {
+						break;
+					}
+				}
+			}
+			f(w, pt, &self[pt])?;
+		}
+
+		Ok(())
+	}
+
+	pub fn printf<F: Fn(&mut Formatter<'_>, Ve<ND>, &T) -> std::fmt::Result>(&self, f: F) {
+		println!("{:?}", PrintHelper(self, &f))
+	}
+}
+
+
+struct PrintHelper<'a, const ND: usize, T, M: Deref<Target=[T]>, F: Fn(&mut Formatter<'_>, Ve<ND>, &T) -> std::fmt::Result> (&'a Grid<ND, M>, F);
+
+impl<'a, const ND: usize, T, M: Deref<Target=[T]>, F: Fn(&mut Formatter<'_>, Ve<ND>, &T) -> std::fmt::Result> Debug for PrintHelper<'a, ND, T, M, F> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		self.0.writef(f, &self.1)
+	}
+}
+
 impl<const ND: usize, T: Clone, M: Deref<Target=[T]>> Grid<ND, M> {
 	pub fn cloned(&self) -> Grid<ND, Vec<T>> {
 		Grid {
@@ -363,9 +402,31 @@ impl<const N: usize> Ve<N> {
 	pub fn max_element(&self) -> isize {
 		self.0.iter().cloned().max().unwrap()
 	}
-	
+
 	pub fn rem_euclid(&self, rhs: Self) -> Self {
 		Ve(array::from_fn(|i| self[i].rem_euclid(rhs[i])))
+	}
+
+	pub fn cat<const B: usize, const R: usize>(&self, other: impl Into<Ve<B>>) -> Ve<R> {
+		const { assert!(N + B == R) }
+		let mut out = [0; R];
+		{
+			let (a, b) = out.split_at_mut(N);
+			a.copy_from_slice(&self.0);
+			b.copy_from_slice(&other.into().0);
+		}
+		Ve(out)
+	}
+
+	pub fn cat1<const R: usize>(&self, n: isize) -> Ve<R> {
+		self.cat::<1, R>(Ve([n]))
+	}
+}
+
+impl<const W: usize> Ve<W> {
+	pub fn part<const A: usize>(&self) -> Ve<A> {
+		const { assert!(A <= W) }
+		Ve(<[isize; A]>::try_from(&self.0[..A]).unwrap())
 	}
 }
 
