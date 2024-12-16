@@ -236,6 +236,18 @@ impl<const ND: usize, T, M: DerefMut<Target=[T]>> Grid<ND, M> {
 	}
 }
 
+impl<M: Deref<Target=[u8]>> Grid<2, M> {
+	pub fn print(&self) {
+		println!();
+		for y in 0..self.shape[1] {
+			for x in 0..self.shape[0] {
+				print!("{}", self[[x, y]] as char);
+			}
+			print!("\n");
+		}
+	}
+}
+
 impl Grid<2, &[u8]> {
 	pub fn from_char_grid(cg: &(impl AsRef<[u8]> + ?Sized)) -> Grid<2, &[u8]> {
 		let input = cg.as_ref();
