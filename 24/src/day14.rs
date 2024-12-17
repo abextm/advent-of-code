@@ -90,6 +90,7 @@ fn part2(input: &str) -> isize {
 	panic!();
 }
 
+#[cfg(test)]
 const EX: &str = "p=0,4 v=3,-3
 p=6,3 v=-1,-3
 p=10,3 v=-1,2
