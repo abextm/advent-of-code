@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::Read;
 use crate::grid::Ve;
 
 #[derive(Clone)]
@@ -108,7 +107,7 @@ fn solve(input: &str, part1: bool) -> impl std::fmt::Debug {
 
 	let n = if part1 { 2 } else { 25 };
 
-	for i in 0..n {
+	for _ in 0..n {
 		let mut new = directional.clone();
 		let mut old = None;
 		std::mem::swap(&mut old, &mut aa.next);

@@ -13,7 +13,6 @@ fn solve0(input: &str, min_save: i32, cheat_len: i32) -> i32 {
 	let g = Grid::from_char_grid(input);
 
 	let start = g.find(b'S').next().unwrap();
-	let end = g.find(b'E').next().unwrap();
 
 	let mut min = Grid::new(g.shape(), i32::MAX);
 	min[start] = 0;
