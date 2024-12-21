@@ -29,7 +29,7 @@ fn solve(input: &str) -> impl std::fmt::Debug {
 	}).sum::<usize>()
 }
 
-#[aoc(part2)]
+#[aoc(part2 = 4681)]
 fn part2(input: &str) -> impl std::fmt::Debug {
 	let [rules, bit] = input.trim().splitn(2, "\n\n").next_chunk().unwrap();
 
@@ -59,7 +59,7 @@ fn part2(input: &str) -> impl std::fmt::Debug {
 						}
 					}
 				}
-				break
+				break;
 			}
 		}
 
