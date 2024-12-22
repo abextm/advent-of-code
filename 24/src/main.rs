@@ -1,6 +1,7 @@
 #![feature(iter_next_chunk)]
 #![feature(iter_array_chunks)]
 #![feature(iter_intersperse)]
+#![feature(iter_map_windows)]
 
 #[macro_use] extern crate aoc_helper;
 
@@ -28,6 +29,7 @@ mod day18;
 mod day19;
 mod day20;
 mod day21;
+mod day22;
 
 aoc_year!(24);
 
