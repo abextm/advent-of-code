@@ -16,4 +16,5 @@ aoc-helper = { path = "../aoc-helper/aoc-helper" }
 regex = "1"
 memchr = "2.7.4"
 strength_reduce = "0.2.4"
+itertools = "0.13.0"
 num = "0.4.3"
