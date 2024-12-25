@@ -1,5 +1,4 @@
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::HashMap;
 use regex::{Match, Regex};
 
 type Key = [u8; 3];
@@ -90,42 +89,15 @@ struct GraphPair {
 	num_syms: usize,
 }
 
-#[derive(Eq, PartialEq)]
-struct FindState {
-	mapping: Vec<Option<Key>>,
-	swaps: Vec<(Key, Key)>,
-	start: usize,
-	min: usize,
-}
-
-impl PartialOrd<Self> for FindState {
-	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-		self.start.partial_cmp(&other.start)
-	}
-}
-
-impl Ord for FindState {
-	fn cmp(&self, other: &Self) -> Ordering {
-		self.start.cmp(&other.start)
-	}
-}
-
 impl GraphPair {
 	fn find(&self) -> Option<Vec<(Key, Key)>> {
-		let mut heap = BinaryHeap::new();
-		if let Some(r) = self.test_swaps(&mut heap, &mut vec![None; self.num_syms], 0, 0, &[]) {
+		if let Some(r) = self.test_swaps(&mut vec![None; self.num_syms], 0, 0, &[]) {
 			return Some(r);
 		}
-		while let Some(v) = heap.pop() {
-			if let Some(r) = self.dispatch_find_state(&mut heap, v) {
-				return Some(r);
-			}
-		}
-
 		None
 	}
 
-	fn test_swaps(&self, heap: &mut BinaryHeap<FindState>, mapping: &mut [Option<Key>], start: usize, min_complete: usize, swaps: &[(Key, Key)]) -> Option<Vec<(Key, Key)>> {
+	fn test_swaps(&self, mapping: &mut [Option<Key>], start: usize, min_complete: usize, swaps: &[(Key, Key)]) -> Option<Vec<(Key, Key)>> {
 		for (i, ex) in self.expected.iter().enumerate().skip(start) {
 			let args = [ex.lhs, ex.rhs].map(|l| match l {
 				Key2::Sym(v) => match mapping[v as usize] {
@@ -165,7 +137,7 @@ impl GraphPair {
 							{
 								let mut swaps = Vec::from(swaps);
 								swaps.push((k, res));
-								if let Some(v) = self.test_swaps(heap, mapping, i, i, &swaps) {
+								if let Some(v) = self.test_swaps(mapping, i, i, &swaps) {
 									return Some(v);
 								}
 							}
@@ -180,52 +152,28 @@ impl GraphPair {
 				return None;
 			}
 
-			heap.push(FindState {
-				mapping: mapping.to_vec(),
-				swaps: swaps.to_vec(),
-				start: i,
-				min: i,
-			});
-
-			return None;
-		}
-
-		Some(swaps.to_vec())
-	}
-
-	fn dispatch_find_state(&self, heap: &mut BinaryHeap<FindState>, s: FindState) -> Option<Vec<(Key, Key)>> {
-		let mut mapping = s.mapping;
-		let mut swaps = s.swaps;
-		for swi in (0..s.start).rev() {
-			if let Key2::Sym(sym) = self.expected[swi].res {
-				let k1 = mapping[sym as usize].unwrap();
-				for op2 in self.test.values() {
-					if let Key2::Known(k2) = op2.res {
-						if !mapping[..sym as usize].contains(&Some(k2)) && k1 != k2 {
-							swaps.push((k1, k2));
-							if let Some(v) = self.test_swaps(heap, &mut mapping[..], swi, s.min, &swaps) {
-								return Some(v);
+			let mut swaps = Vec::from(swaps);
+			for swi in (0..i).rev() {
+				if let Key2::Sym(sym) = self.expected[swi].res {
+					let k1 = mapping[sym as usize].unwrap();
+					for op2 in self.test.values() {
+						if let Key2::Known(k2) = op2.res {
+							if !mapping[..sym as usize].contains(&Some(k2)) && k1 != k2 {
+								swaps.push((k1, k2));
+								if let Some(v) = self.test_swaps(&mut mapping[..], swi, i, &swaps) {
+									return Some(v);
+								}
+								swaps.pop();
 							}
-							swaps.pop();
 						}
 					}
 				}
 			}
 
-			if let Some(v) = heap.peek() {
-				if v.start > swi {
-					heap.push(FindState {
-						mapping,
-						swaps,
-						start: swi,
-						min: s.min,
-					});
-					return None;
-				}
-			}
+			return None
 		}
 
-		None
+		Some(swaps.to_vec())
 	}
 }
 
